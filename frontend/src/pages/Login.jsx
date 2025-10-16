@@ -40,8 +40,13 @@ const Login = ({ setAuth }) => {
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-emerald-50 via-teal-50 to-cyan-50">
       <div className="w-full max-w-md p-8 bg-white rounded-2xl shadow-xl">
         <div className="text-center mb-8">
+          <img 
+            src="https://customer-assets.emergentagent.com/job_98f43d7c-462e-47e8-bf72-c54d3fbfbeeb/artifacts/kkp6xmyc_bano_fresh_logo.png" 
+            alt="Bano Fresh Logo" 
+            className="h-24 w-24 mx-auto mb-4 object-contain"
+          />
           <h1 className="text-4xl font-bold text-gray-800 mb-2" style={{ fontFamily: 'Space Grotesk, sans-serif' }}>
-            Meat Inventory
+            Bano Fresh
           </h1>
           <p className="text-gray-600">Sign in to your account</p>
         </div>

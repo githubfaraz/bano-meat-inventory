@@ -31,9 +31,16 @@ const Layout = ({ setAuth }) => {
       {/* Sidebar */}
       <aside className="w-64 bg-white border-r border-gray-200 flex flex-col">
         <div className="p-6 border-b border-gray-200">
-          <h1 className="text-2xl font-bold text-emerald-600" style={{ fontFamily: 'Space Grotesk, sans-serif' }}>
-            Meat Inventory
-          </h1>
+          <div className="flex items-center gap-3">
+            <img 
+              src="https://customer-assets.emergentagent.com/job_98f43d7c-462e-47e8-bf72-c54d3fbfbeeb/artifacts/kkp6xmyc_bano_fresh_logo.png" 
+              alt="Bano Fresh Logo" 
+              className="h-12 w-12 object-contain"
+            />
+            <h1 className="text-2xl font-bold text-emerald-600" style={{ fontFamily: 'Space Grotesk, sans-serif' }}>
+              Bano Fresh
+            </h1>
+          </div>
         </div>
 
         <nav className="flex-1 p-4 space-y-2">
