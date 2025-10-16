@@ -116,14 +116,6 @@ const Products = () => {
     });
     setEditingProduct(null);
   };
-      unit: "kg",
-      price_per_unit: "",
-      stock_quantity: "",
-      reorder_level: "",
-      sku: "",
-    });
-    setEditingProduct(null);
-  };
 
   const getCategoryBadgeColor = (category) => {
     const colors = {
