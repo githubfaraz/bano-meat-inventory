@@ -312,9 +312,16 @@ const Products = () => {
               <div className="flex justify-between items-start">
                 <div>
                   <CardTitle className="text-lg mb-2">{product.name}</CardTitle>
-                  <span className={`px-2 py-1 rounded-full text-xs font-semibold ${getCategoryBadgeColor(product.category)}`}>
-                    {product.category}
-                  </span>
+                  <div className="flex gap-2">
+                    <span className={`px-2 py-1 rounded-full text-xs font-semibold ${getCategoryBadgeColor(product.category)}`}>
+                      {product.category}
+                    </span>
+                    {product.is_raw_material && (
+                      <span className="px-2 py-1 rounded-full text-xs font-semibold bg-blue-100 text-blue-800">
+                        Raw Material
+                      </span>
+                    )}
+                  </div>
                 </div>
                 <div className="flex gap-2">
                   <Button variant="ghost" size="icon" onClick={() => handleEdit(product)} data-testid={`edit-product-${product.id}`}>
