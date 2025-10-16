@@ -152,8 +152,11 @@ const POS = () => {
 
     const receiptContent = `
       <div class="receipt-content">
-        <div class="text-center font-bold" style="font-size: 16px; margin-bottom: 8px;">
-          MEAT INVENTORY
+        <div class="text-center font-bold" style="font-size: 18px; margin-bottom: 4px;">
+          BANO FRESH
+        </div>
+        <div class="text-center" style="font-size: 12px; margin-bottom: 12px;">
+          Fresh Meat Delivered Daily
         </div>
         <div class="text-center" style="margin-bottom: 12px;">
           Receipt #${sale.id.substring(0, 8)}
@@ -162,6 +165,7 @@ const POS = () => {
           <div>Date: ${new Date(sale.created_at).toLocaleString()}</div>
           <div>Customer: ${customer?.name || "Walk-in Customer"}</div>
           ${customer?.phone ? `<div>Phone: ${customer.phone}</div>` : ""}
+        </div>
         </div>
         <table style="margin: 8px 0;">
           <thead>
