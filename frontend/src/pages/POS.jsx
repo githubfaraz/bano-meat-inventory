@@ -118,7 +118,7 @@ const POS = () => {
       const customer = customers.find((c) => c.id === selectedCustomer);
 
       const saleData = {
-        customer_id: selectedCustomer || null,
+        customer_id: selectedCustomer === "walk-in" ? null : selectedCustomer,
         customer_name: customer?.name || "Walk-in Customer",
         items: cart,
         subtotal,
