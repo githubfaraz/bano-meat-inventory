@@ -93,6 +93,9 @@ const Products = () => {
       stock_quantity: product.stock_quantity.toString(),
       reorder_level: product.reorder_level.toString(),
       sku: product.sku || "",
+      is_raw_material: product.is_raw_material || false,
+      purchase_cost: product.purchase_cost?.toString() || "",
+      derived_from: product.derived_from || "",
     });
     setDialogOpen(true);
   };
@@ -102,6 +105,17 @@ const Products = () => {
       name: "",
       category: "chicken",
       description: "",
+      unit: "kg",
+      price_per_unit: "",
+      stock_quantity: "",
+      reorder_level: "",
+      sku: "",
+      is_raw_material: false,
+      purchase_cost: "",
+      derived_from: "",
+    });
+    setEditingProduct(null);
+  };
       unit: "kg",
       price_per_unit: "",
       stock_quantity: "",
