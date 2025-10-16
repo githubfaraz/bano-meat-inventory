@@ -38,7 +38,7 @@ const Dashboard = () => {
         <h1 className="text-4xl font-bold text-gray-800 mb-2" style={{ fontFamily: 'Space Grotesk, sans-serif' }}>
           Dashboard
         </h1>
-        <p className="text-gray-600">Overview of your meat inventory business</p>
+        <p className="text-gray-600">Overview of your Bano Fresh business</p>
       </div>
 
       {/* Stats Cards */}
