@@ -498,6 +498,563 @@ async def get_dashboard_stats(current_user: User = Depends(get_current_user)):
         recent_sales=[Sale(**s) for s in recent]
     )
 
+# ========== PURCHASES ==========
+
+@api_router.post("/purchases", response_model=Purchase)
+async def create_purchase(purchase_input: PurchaseCreate, current_user: User = Depends(get_current_user)):
+    # Get vendor and raw material details
+    vendor = await db.vendors.find_one({"id": purchase_input.vendor_id}, {"_id": 0})
+    if not vendor:
+        raise HTTPException(status_code=404, detail="Vendor not found")
+    
+    raw_material = await db.products.find_one({"id": purchase_input.raw_material_id}, {"_id": 0})
+    if not raw_material:
+        raise HTTPException(status_code=404, detail="Raw material not found")
+    
+    if not raw_material.get('is_raw_material', False):
+        raise HTTPException(status_code=400, detail="Selected product is not a raw material")
+    
+    # Update raw material stock
+    new_stock = raw_material['stock_quantity'] + purchase_input.quantity
+    await db.products.update_one(
+        {"id": purchase_input.raw_material_id},
+        {"$set": {"stock_quantity": new_stock, "purchase_cost": purchase_input.cost_per_unit}}
+    )
+    
+    # Create purchase record
+    purchase = Purchase(
+        vendor_id=purchase_input.vendor_id,
+        vendor_name=vendor['name'],
+        raw_material_id=purchase_input.raw_material_id,
+        raw_material_name=raw_material['name'],
+        quantity=purchase_input.quantity,
+        unit=raw_material['unit'],
+        cost_per_unit=purchase_input.cost_per_unit,
+        total_cost=purchase_input.total_cost,
+        created_by=current_user.id
+    )
+    
+    if purchase_input.purchase_date:
+        purchase.purchase_date = datetime.fromisoformat(purchase_input.purchase_date)
+    
+    doc = purchase.model_dump()
+    doc['purchase_date'] = doc['purchase_date'].isoformat()
+    
+    await db.purchases.insert_one(doc)
+    return purchase
+
+@api_router.get("/purchases", response_model=List[Purchase])
+async def get_purchases(current_user: User = Depends(get_current_user)):
+    purchases = await db.purchases.find({}, {"_id": 0}).sort("purchase_date", -1).to_list(1000)
+    for p in purchases:
+        if isinstance(p.get('purchase_date'), str):
+            p['purchase_date'] = datetime.fromisoformat(p['purchase_date'])
+    return purchases
+
+@api_router.delete("/purchases/{purchase_id}")
+async def delete_purchase(purchase_id: str, current_user: User = Depends(get_current_user)):
+    result = await db.purchases.delete_one({"id": purchase_id})
+    if result.deleted_count == 0:
+        raise HTTPException(status_code=404, detail="Purchase not found")
+    return {"message": "Purchase deleted successfully"}
+
+# ========== REPORTS ==========
+
+from fastapi.responses import StreamingResponse
+from io import BytesIO
+import csv
+from openpyxl import Workbook
+from openpyxl.styles import Font, PatternFill, Alignment
+from reportlab.lib.pagesizes import letter, A4
+from reportlab.lib import colors
+from reportlab.lib.styles import getSampleStyleSheet
+from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer
+from reportlab.lib.units import inch
+
+@api_router.get("/reports/sales")
+async def get_sales_report(
+    start_date: Optional[str] = None,
+    end_date: Optional[str] = None,
+    format: str = "json",
+    current_user: User = Depends(get_current_user)
+):
+    # Fetch sales
+    sales = await db.sales.find({}, {"_id": 0}).to_list(10000)
+    
+    # Filter by date if provided
+    if start_date:
+        start = datetime.fromisoformat(start_date)
+        sales = [s for s in sales if datetime.fromisoformat(s['created_at']) >= start]
+    if end_date:
+        end = datetime.fromisoformat(end_date).replace(hour=23, minute=59, second=59)
+        sales = [s for s in sales if datetime.fromisoformat(s['created_at']) <= end]
+    
+    if format == "csv":
+        output = BytesIO()
+        writer = csv.writer(output)
+        writer.writerow(['Date', 'Customer', 'Items', 'Subtotal', 'Tax', 'Discount', 'Total', 'Payment Method'])
+        for sale in sales:
+            writer.writerow([
+                sale['created_at'],
+                sale.get('customer_name', 'Walk-in'),
+                len(sale['items']),
+                sale['subtotal'],
+                sale['tax'],
+                sale['discount'],
+                sale['total'],
+                sale['payment_method']
+            ])
+        output.seek(0)
+        return StreamingResponse(
+            output,
+            media_type="text/csv",
+            headers={"Content-Disposition": "attachment; filename=sales_report.csv"}
+        )
+    
+    elif format == "excel":
+        wb = Workbook()
+        ws = wb.active
+        ws.title = "Sales Report"
+        
+        # Headers
+        headers = ['Date', 'Customer', 'Items', 'Subtotal', 'Tax', 'Discount', 'Total', 'Payment Method']
+        ws.append(headers)
+        
+        # Style headers
+        for cell in ws[1]:
+            cell.font = Font(bold=True, color="FFFFFF")
+            cell.fill = PatternFill(start_color="0066CC", end_color="0066CC", fill_type="solid")
+            cell.alignment = Alignment(horizontal="center")
+        
+        # Data
+        for sale in sales:
+            ws.append([
+                sale['created_at'],
+                sale.get('customer_name', 'Walk-in'),
+                len(sale['items']),
+                sale['subtotal'],
+                sale['tax'],
+                sale['discount'],
+                sale['total'],
+                sale['payment_method']
+            ])
+        
+        output = BytesIO()
+        wb.save(output)
+        output.seek(0)
+        return StreamingResponse(
+            output,
+            media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            headers={"Content-Disposition": "attachment; filename=sales_report.xlsx"}
+        )
+    
+    elif format == "pdf":
+        buffer = BytesIO()
+        doc = SimpleDocTemplate(buffer, pagesize=letter)
+        elements = []
+        
+        styles = getSampleStyleSheet()
+        title = Paragraph("<b>Sales Report</b>", styles['Title'])
+        elements.append(title)
+        elements.append(Spacer(1, 0.3*inch))
+        
+        data = [['Date', 'Customer', 'Items', 'Subtotal', 'Tax', 'Discount', 'Total', 'Payment']]
+        for sale in sales:
+            data.append([
+                sale['created_at'][:10],
+                sale.get('customer_name', 'Walk-in')[:15],
+                str(len(sale['items'])),
+                f"₹{sale['subtotal']:.2f}",
+                f"₹{sale['tax']:.2f}",
+                f"₹{sale['discount']:.2f}",
+                f"₹{sale['total']:.2f}",
+                sale['payment_method']
+            ])
+        
+        table = Table(data)
+        table.setStyle(TableStyle([
+            ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#0066CC')),
+            ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
+            ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+            ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+            ('FONTSIZE', (0, 0), (-1, 0), 10),
+            ('BOTTOMPADDING', (0, 0), (-1, 0), 12),
+            ('GRID', (0, 0), (-1, -1), 0.5, colors.grey)
+        ]))
+        elements.append(table)
+        
+        doc.build(elements)
+        buffer.seek(0)
+        return StreamingResponse(
+            buffer,
+            media_type="application/pdf",
+            headers={"Content-Disposition": "attachment; filename=sales_report.pdf"}
+        )
+    
+    else:  # json
+        return {"sales": sales, "total_count": len(sales), "total_revenue": sum(s['total'] for s in sales)}
+
+@api_router.get("/reports/inventory")
+async def get_inventory_report(format: str = "json", current_user: User = Depends(get_current_user)):
+    products = await db.products.find({}, {"_id": 0}).to_list(1000)
+    
+    if format == "csv":
+        output = BytesIO()
+        writer = csv.writer(output)
+        writer.writerow(['Name', 'Category', 'Type', 'Stock', 'Unit', 'Reorder Level', 'Price', 'Purchase Cost', 'Status'])
+        for product in products:
+            status = 'Low Stock' if product['stock_quantity'] <= product['reorder_level'] else 'In Stock'
+            ptype = 'Raw Material' if product.get('is_raw_material', False) else 'Derived Product'
+            writer.writerow([
+                product['name'],
+                product['category'],
+                ptype,
+                product['stock_quantity'],
+                product['unit'],
+                product['reorder_level'],
+                product['price_per_unit'],
+                product.get('purchase_cost', 0),
+                status
+            ])
+        output.seek(0)
+        return StreamingResponse(
+            output,
+            media_type="text/csv",
+            headers={"Content-Disposition": "attachment; filename=inventory_report.csv"}
+        )
+    
+    elif format == "excel":
+        wb = Workbook()
+        ws = wb.active
+        ws.title = "Inventory Report"
+        
+        headers = ['Name', 'Category', 'Type', 'Stock', 'Unit', 'Reorder Level', 'Price', 'Purchase Cost', 'Status']
+        ws.append(headers)
+        
+        for cell in ws[1]:
+            cell.font = Font(bold=True, color="FFFFFF")
+            cell.fill = PatternFill(start_color="008000", end_color="008000", fill_type="solid")
+            cell.alignment = Alignment(horizontal="center")
+        
+        for product in products:
+            status = 'Low Stock' if product['stock_quantity'] <= product['reorder_level'] else 'In Stock'
+            ptype = 'Raw Material' if product.get('is_raw_material', False) else 'Derived Product'
+            ws.append([
+                product['name'],
+                product['category'],
+                ptype,
+                product['stock_quantity'],
+                product['unit'],
+                product['reorder_level'],
+                product['price_per_unit'],
+                product.get('purchase_cost', 0),
+                status
+            ])
+        
+        output = BytesIO()
+        wb.save(output)
+        output.seek(0)
+        return StreamingResponse(
+            output,
+            media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            headers={"Content-Disposition": "attachment; filename=inventory_report.xlsx"}
+        )
+    
+    elif format == "pdf":
+        buffer = BytesIO()
+        doc = SimpleDocTemplate(buffer, pagesize=A4)
+        elements = []
+        
+        styles = getSampleStyleSheet()
+        title = Paragraph("<b>Inventory Report</b>", styles['Title'])
+        elements.append(title)
+        elements.append(Spacer(1, 0.3*inch))
+        
+        data = [['Name', 'Category', 'Type', 'Stock', 'Unit', 'Price', 'Status']]
+        for product in products:
+            status = 'Low' if product['stock_quantity'] <= product['reorder_level'] else 'OK'
+            ptype = 'Raw' if product.get('is_raw_material', False) else 'Derived'
+            data.append([
+                product['name'][:20],
+                product['category'][:10],
+                ptype,
+                str(product['stock_quantity']),
+                product['unit'],
+                f"₹{product['price_per_unit']:.0f}",
+                status
+            ])
+        
+        table = Table(data)
+        table.setStyle(TableStyle([
+            ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#008000')),
+            ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
+            ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+            ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+            ('FONTSIZE', (0, 0), (-1, 0), 9),
+            ('GRID', (0, 0), (-1, -1), 0.5, colors.grey)
+        ]))
+        elements.append(table)
+        
+        doc.build(elements)
+        buffer.seek(0)
+        return StreamingResponse(
+            buffer,
+            media_type="application/pdf",
+            headers={"Content-Disposition": "attachment; filename=inventory_report.pdf"}
+        )
+    
+    else:
+        low_stock = [p for p in products if p['stock_quantity'] <= p['reorder_level']]
+        return {
+            "products": products,
+            "total_products": len(products),
+            "low_stock_count": len(low_stock),
+            "low_stock_items": low_stock
+        }
+
+@api_router.get("/reports/purchases")
+async def get_purchase_report(
+    start_date: Optional[str] = None,
+    end_date: Optional[str] = None,
+    format: str = "json",
+    current_user: User = Depends(get_current_user)
+):
+    purchases = await db.purchases.find({}, {"_id": 0}).to_list(10000)
+    
+    if start_date:
+        start = datetime.fromisoformat(start_date)
+        purchases = [p for p in purchases if datetime.fromisoformat(p['purchase_date']) >= start]
+    if end_date:
+        end = datetime.fromisoformat(end_date).replace(hour=23, minute=59, second=59)
+        purchases = [p for p in purchases if datetime.fromisoformat(p['purchase_date']) <= end]
+    
+    if format == "csv":
+        output = BytesIO()
+        writer = csv.writer(output)
+        writer.writerow(['Date', 'Vendor', 'Raw Material', 'Quantity', 'Unit', 'Cost/Unit', 'Total Cost'])
+        for purchase in purchases:
+            writer.writerow([
+                purchase['purchase_date'],
+                purchase['vendor_name'],
+                purchase['raw_material_name'],
+                purchase['quantity'],
+                purchase['unit'],
+                purchase['cost_per_unit'],
+                purchase['total_cost']
+            ])
+        output.seek(0)
+        return StreamingResponse(
+            output,
+            media_type="text/csv",
+            headers={"Content-Disposition": "attachment; filename=purchase_report.csv"}
+        )
+    
+    elif format == "excel":
+        wb = Workbook()
+        ws = wb.active
+        ws.title = "Purchase Report"
+        
+        headers = ['Date', 'Vendor', 'Raw Material', 'Quantity', 'Unit', 'Cost/Unit', 'Total Cost']
+        ws.append(headers)
+        
+        for cell in ws[1]:
+            cell.font = Font(bold=True, color="FFFFFF")
+            cell.fill = PatternFill(start_color="FF6600", end_color="FF6600", fill_type="solid")
+            cell.alignment = Alignment(horizontal="center")
+        
+        for purchase in purchases:
+            ws.append([
+                purchase['purchase_date'],
+                purchase['vendor_name'],
+                purchase['raw_material_name'],
+                purchase['quantity'],
+                purchase['unit'],
+                purchase['cost_per_unit'],
+                purchase['total_cost']
+            ])
+        
+        output = BytesIO()
+        wb.save(output)
+        output.seek(0)
+        return StreamingResponse(
+            output,
+            media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            headers={"Content-Disposition": "attachment; filename=purchase_report.xlsx"}
+        )
+    
+    elif format == "pdf":
+        buffer = BytesIO()
+        doc = SimpleDocTemplate(buffer, pagesize=letter)
+        elements = []
+        
+        styles = getSampleStyleSheet()
+        title = Paragraph("<b>Purchase Report</b>", styles['Title'])
+        elements.append(title)
+        elements.append(Spacer(1, 0.3*inch))
+        
+        data = [['Date', 'Vendor', 'Raw Material', 'Quantity', 'Unit', 'Cost/Unit', 'Total']]
+        for purchase in purchases:
+            data.append([
+                purchase['purchase_date'][:10],
+                purchase['vendor_name'][:20],
+                purchase['raw_material_name'][:15],
+                str(purchase['quantity']),
+                purchase['unit'],
+                f"₹{purchase['cost_per_unit']:.2f}",
+                f"₹{purchase['total_cost']:.2f}"
+            ])
+        
+        table = Table(data)
+        table.setStyle(TableStyle([
+            ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#FF6600')),
+            ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
+            ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+            ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+            ('GRID', (0, 0), (-1, -1), 0.5, colors.grey)
+        ]))
+        elements.append(table)
+        
+        doc.build(elements)
+        buffer.seek(0)
+        return StreamingResponse(
+            buffer,
+            media_type="application/pdf",
+            headers={"Content-Disposition": "attachment; filename=purchase_report.pdf"}
+        )
+    
+    else:
+        return {
+            "purchases": purchases,
+            "total_count": len(purchases),
+            "total_cost": sum(p['total_cost'] for p in purchases)
+        }
+
+@api_router.get("/reports/profit-loss")
+async def get_profit_loss_report(
+    start_date: Optional[str] = None,
+    end_date: Optional[str] = None,
+    format: str = "json",
+    current_user: User = Depends(get_current_user)
+):
+    # Get sales and purchases
+    sales = await db.sales.find({}, {"_id": 0}).to_list(10000)
+    purchases = await db.purchases.find({}, {"_id": 0}).to_list(10000)
+    
+    # Filter by date
+    if start_date:
+        start = datetime.fromisoformat(start_date)
+        sales = [s for s in sales if datetime.fromisoformat(s['created_at']) >= start]
+        purchases = [p for p in purchases if datetime.fromisoformat(p['purchase_date']) >= start]
+    if end_date:
+        end = datetime.fromisoformat(end_date).replace(hour=23, minute=59, second=59)
+        sales = [s for s in sales if datetime.fromisoformat(s['created_at']) <= end]
+        purchases = [p for p in purchases if datetime.fromisoformat(p['purchase_date']) <= end]
+    
+    total_revenue = sum(s['total'] for s in sales)
+    total_purchase_cost = sum(p['total_cost'] for p in purchases)
+    gross_profit = total_revenue - total_purchase_cost
+    profit_margin = (gross_profit / total_revenue * 100) if total_revenue > 0 else 0
+    
+    if format == "csv":
+        output = BytesIO()
+        writer = csv.writer(output)
+        writer.writerow(['Metric', 'Amount'])
+        writer.writerow(['Total Revenue', total_revenue])
+        writer.writerow(['Total Purchase Cost', total_purchase_cost])
+        writer.writerow(['Gross Profit', gross_profit])
+        writer.writerow(['Profit Margin %', f"{profit_margin:.2f}%"])
+        writer.writerow([])
+        writer.writerow(['Sales Count', len(sales)])
+        writer.writerow(['Purchase Count', len(purchases)])
+        output.seek(0)
+        return StreamingResponse(
+            output,
+            media_type="text/csv",
+            headers={"Content-Disposition": "attachment; filename=profit_loss_report.csv"}
+        )
+    
+    elif format == "excel":
+        wb = Workbook()
+        ws = wb.active
+        ws.title = "Profit & Loss"
+        
+        ws['A1'] = 'Profit & Loss Report'
+        ws['A1'].font = Font(bold=True, size=16)
+        ws.merge_cells('A1:B1')
+        
+        ws.append([])
+        ws.append(['Metric', 'Amount'])
+        ws['A3'].font = Font(bold=True)
+        ws['B3'].font = Font(bold=True)
+        
+        ws.append(['Total Revenue', total_revenue])
+        ws.append(['Total Purchase Cost', total_purchase_cost])
+        ws.append(['Gross Profit', gross_profit])
+        ws.append(['Profit Margin %', f"{profit_margin:.2f}%"])
+        ws.append([])
+        ws.append(['Sales Count', len(sales)])
+        ws.append(['Purchase Count', len(purchases)])
+        
+        output = BytesIO()
+        wb.save(output)
+        output.seek(0)
+        return StreamingResponse(
+            output,
+            media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            headers={"Content-Disposition": "attachment; filename=profit_loss_report.xlsx"}
+        )
+    
+    elif format == "pdf":
+        buffer = BytesIO()
+        doc = SimpleDocTemplate(buffer, pagesize=letter)
+        elements = []
+        
+        styles = getSampleStyleSheet()
+        title = Paragraph("<b>Profit & Loss Report</b>", styles['Title'])
+        elements.append(title)
+        elements.append(Spacer(1, 0.5*inch))
+        
+        data = [
+            ['Metric', 'Amount'],
+            ['Total Revenue', f"₹{total_revenue:.2f}"],
+            ['Total Purchase Cost', f"₹{total_purchase_cost:.2f}"],
+            ['Gross Profit', f"₹{gross_profit:.2f}"],
+            ['Profit Margin', f"{profit_margin:.2f}%"],
+            ['', ''],
+            ['Sales Count', str(len(sales))],
+            ['Purchase Count', str(len(purchases))]
+        ]
+        
+        table = Table(data, colWidths=[3*inch, 2*inch])
+        table.setStyle(TableStyle([
+            ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#6600CC')),
+            ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
+            ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
+            ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+            ('FONTSIZE', (0, 0), (-1, -1), 11),
+            ('GRID', (0, 0), (-1, -1), 0.5, colors.grey),
+            ('BACKGROUND', (0, 3), (-1, 3), colors.HexColor('#CCFFCC') if gross_profit > 0 else colors.HexColor('#FFCCCC'))
+        ]))
+        elements.append(table)
+        
+        doc.build(elements)
+        buffer.seek(0)
+        return StreamingResponse(
+            buffer,
+            media_type="application/pdf",
+            headers={"Content-Disposition": "attachment; filename=profit_loss_report.pdf"}
+        )
+    
+    else:
+        return {
+            "total_revenue": total_revenue,
+            "total_purchase_cost": total_purchase_cost,
+            "gross_profit": gross_profit,
+            "profit_margin": profit_margin,
+            "sales_count": len(sales),
+            "purchase_count": len(purchases)
+        }
+
 # ========== ROOT ==========
 
 @api_router.get("/")
