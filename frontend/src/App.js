@@ -69,8 +69,10 @@ function App() {
             <Route path="products" element={<Products />} />
             <Route path="vendors" element={<Vendors />} />
             <Route path="customers" element={<Customers />} />
+            <Route path="purchases" element={<Purchases />} />
             <Route path="pos" element={<POS />} />
             <Route path="sales" element={<Sales />} />
+            <Route path="reports" element={<Reports />} />
           </Route>
         </Routes>
       </BrowserRouter>
