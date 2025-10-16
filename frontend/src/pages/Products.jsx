@@ -52,6 +52,7 @@ const Products = () => {
         price_per_unit: parseFloat(formData.price_per_unit),
         stock_quantity: parseFloat(formData.stock_quantity),
         reorder_level: parseFloat(formData.reorder_level),
+        purchase_cost: parseFloat(formData.purchase_cost) || 0,
       };
 
       if (editingProduct) {
