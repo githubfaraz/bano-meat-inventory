@@ -355,12 +355,12 @@ const POS = () => {
               <CardTitle>Customer</CardTitle>
             </CardHeader>
             <CardContent>
-              <Select value={selectedCustomer || ""} onValueChange={setSelectedCustomer}>
+              <Select value={selectedCustomer || "walk-in"} onValueChange={setSelectedCustomer}>
                 <SelectTrigger data-testid="pos-customer-select">
                   <SelectValue placeholder="Walk-in Customer" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">Walk-in Customer</SelectItem>
+                  <SelectItem value="walk-in">Walk-in Customer</SelectItem>
                   {customers.map((customer) => (
                     <SelectItem key={customer.id} value={customer.id}>
                       {customer.name} - {customer.phone}
