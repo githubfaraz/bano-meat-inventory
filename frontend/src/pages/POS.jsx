@@ -136,7 +136,7 @@ const POS = () => {
 
       // Reset
       setCart([]);
-      setSelectedCustomer(null);
+      setSelectedCustomer("walk-in");
       setDiscount(0);
       setPaymentMethod("cash");
       fetchProducts();
