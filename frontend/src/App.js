@@ -8,8 +8,10 @@ import Dashboard from "@/pages/Dashboard";
 import Products from "@/pages/Products";
 import Vendors from "@/pages/Vendors";
 import Customers from "@/pages/Customers";
+import Purchases from "@/pages/Purchases";
 import POS from "@/pages/POS";
 import Sales from "@/pages/Sales";
+import Reports from "@/pages/Reports";
 import Layout from "@/components/Layout";
 import { Toaster } from "@/components/ui/sonner";
 
