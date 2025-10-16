@@ -139,7 +139,7 @@ const Products = () => {
           <h1 className="text-4xl font-bold text-gray-800 mb-2" style={{ fontFamily: 'Space Grotesk, sans-serif' }}>
             Products
           </h1>
-          <p className="text-gray-600">Manage your meat inventory</p>
+          <p className="text-gray-600">Manage your Bano Fresh inventory</p>
         </div>
         <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
           <DialogTrigger asChild>
