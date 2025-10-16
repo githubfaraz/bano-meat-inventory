@@ -67,6 +67,9 @@ class ProductCreate(BaseModel):
     stock_quantity: float
     reorder_level: float
     sku: Optional[str] = None
+    is_raw_material: bool = False
+    purchase_cost: float = 0.0
+    derived_from: Optional[str] = None
 
 class Product(BaseModel):
     model_config = ConfigDict(extra="ignore")
@@ -79,6 +82,9 @@ class Product(BaseModel):
     stock_quantity: float
     reorder_level: float
     sku: Optional[str] = None
+    is_raw_material: bool = False
+    purchase_cost: float = 0.0
+    derived_from: Optional[str] = None
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     updated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
