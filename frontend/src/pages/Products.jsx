@@ -263,6 +263,39 @@ const Products = () => {
                 />
               </div>
 
+              {/* Raw Material Section */}
+              <div className="border-t pt-4 space-y-4">
+                <div className="flex items-center space-x-2">
+                  <input
+                    type="checkbox"
+                    id="is_raw_material"
+                    checked={formData.is_raw_material}
+                    onChange={(e) => setFormData({ ...formData, is_raw_material: e.target.checked })}
+                    className="w-4 h-4 rounded border-gray-300"
+                    data-testid="product-raw-material-checkbox"
+                  />
+                  <Label htmlFor="is_raw_material" className="font-semibold text-blue-700">
+                    This is a Raw Material (e.g., Whole Chicken, Whole Mutton)
+                  </Label>
+                </div>
+
+                {!formData.is_raw_material && (
+                  <div className="space-y-2 bg-blue-50 p-3 rounded">
+                    <Label htmlFor="purchase_cost">Purchase Cost per Unit (optional)</Label>
+                    <Input
+                      id="purchase_cost"
+                      type="number"
+                      step="0.01"
+                      value={formData.purchase_cost}
+                      onChange={(e) => setFormData({ ...formData, purchase_cost: e.target.value })}
+                      placeholder="Cost when purchased/derived"
+                      data-testid="product-purchase-cost-input"
+                    />
+                    <p className="text-xs text-gray-600">Used for profit/loss calculations</p>
+                  </div>
+                )}
+              </div>
+
               <Button type="submit" className="w-full bg-emerald-600 hover:bg-emerald-700" data-testid="product-submit-button">
                 {editingProduct ? "Update Product" : "Add Product"}
               </Button>
