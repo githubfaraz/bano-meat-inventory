@@ -24,6 +24,9 @@ const Products = () => {
     stock_quantity: "",
     reorder_level: "",
     sku: "",
+    is_raw_material: false,
+    purchase_cost: "",
+    derived_from: "",
   });
 
   useEffect(() => {
