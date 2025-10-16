@@ -20,8 +20,10 @@ const Layout = ({ setAuth }) => {
     { path: "/products", icon: Package, label: "Products" },
     { path: "/vendors", icon: Store, label: "Vendors" },
     { path: "/customers", icon: Users, label: "Customers" },
+    { path: "/purchases", icon: ShoppingBag, label: "Purchases" },
     { path: "/pos", icon: ShoppingCart, label: "POS" },
     { path: "/sales", icon: TrendingUp, label: "Sales" },
+    { path: "/reports", icon: FileText, label: "Reports" },
   ];
 
   return (
