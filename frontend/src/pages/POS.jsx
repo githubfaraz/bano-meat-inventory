@@ -115,7 +115,7 @@ const POS = () => {
     setLoading(true);
     try {
       const { subtotal, discountAmount, taxAmount, total } = calculateTotals();
-      const customer = customers.find((c) => c.id === selectedCustomer);
+      const customer = selectedCustomer === "walk-in" ? null : customers.find((c) => c.id === selectedCustomer);
 
       const saleData = {
         customer_id: selectedCustomer === "walk-in" ? null : selectedCustomer,
