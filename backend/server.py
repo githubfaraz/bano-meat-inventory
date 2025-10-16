@@ -161,6 +161,28 @@ class DashboardStats(BaseModel):
     total_products: int
     recent_sales: List[Sale]
 
+class PurchaseCreate(BaseModel):
+    vendor_id: str
+    raw_material_id: str
+    quantity: float
+    cost_per_unit: float
+    total_cost: float
+    purchase_date: Optional[str] = None
+
+class Purchase(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    vendor_id: str
+    vendor_name: str
+    raw_material_id: str
+    raw_material_name: str
+    quantity: float
+    unit: str
+    cost_per_unit: float
+    total_cost: float
+    purchase_date: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    created_by: str
+
 # ========== AUTHENTICATION ==========
 
 def create_access_token(data: dict):
