@@ -20,15 +20,25 @@ load_dotenv(ROOT_DIR / '.env')
 # MongoDB connection
 import ssl
 import certifi
+# Force use of PyOpenSSL for SSL context
+import OpenSSL
+
 mongo_url = os.environ['MONGO_URL']
+
+# Create SSL context with PyOpenSSL compatibility
+ssl_context = ssl.create_default_context(cafile=certifi.where())
+ssl_context.check_hostname = False
+ssl_context.verify_mode = ssl.CERT_NONE
+
 client = AsyncIOMotorClient(
     mongo_url,
     tls=True,
     tlsCAFile=certifi.where(),
-    tlsAllowInvalidCertificates='true',
+    tlsAllowInvalidCertificates=True,
     serverSelectionTimeoutMS=30000,
     connectTimeoutMS=30000,
-    socketTimeoutMS=30000
+    socketTimeoutMS=30000,
+    ssl_context=ssl_context
 )
 db = client[os.environ['DB_NAME']]
 
