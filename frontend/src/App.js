@@ -58,10 +58,6 @@ function App() {
             element={!isAuthenticated ? <Login setAuth={setIsAuthenticated} /> : <Navigate to="/" />}
           />
           <Route
-            path="/register"
-            element={!isAuthenticated ? <Register setAuth={setIsAuthenticated} /> : <Navigate to="/" />}
-          />
-          <Route
             path="/"
             element={isAuthenticated ? <Layout setAuth={setIsAuthenticated} /> : <Navigate to="/login" />}
           >
@@ -73,6 +69,7 @@ function App() {
             <Route path="pos" element={<POS />} />
             <Route path="sales" element={<Sales />} />
             <Route path="reports" element={<Reports />} />
+            <Route path="users" element={<Users />} />
           </Route>
         </Routes>
       </BrowserRouter>
