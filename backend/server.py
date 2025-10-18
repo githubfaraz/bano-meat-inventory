@@ -209,37 +209,30 @@ async def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(s
     except Exception as e:
         raise HTTPException(status_code=401, detail="Invalid token")
 
-@api_router.post("/auth/register", response_model=TokenResponse)
-async def register(user_input: UserRegister):
-    # Check if user exists
-    existing = await db.users.find_one({"$or": [{"username": user_input.username}, {"email": user_input.email}]}, {"_id": 0})
-    if existing:
-        raise HTTPException(status_code=400, detail="Username or email already exists")
-    
-    # Hash password
-    hashed_password = pwd_context.hash(user_input.password)
-    
-    # Create user
-    user = User(
-        username=user_input.username,
-        email=user_input.email,
-        full_name=user_input.full_name
-    )
-    
-    user_doc = user.model_dump()
-    user_doc['password'] = hashed_password
-    user_doc['created_at'] = user_doc['created_at'].isoformat()
-    
-    await db.users.insert_one(user_doc)
-    
-    # Create token
-    access_token = create_access_token({"sub": user.id})
-    
-    return TokenResponse(
-        access_token=access_token,
-        token_type="bearer",
-        user=user
-    )
+# Initialize admin user on startup
+@app.on_event("startup")
+async def create_admin_user():
+    try:
+        # Check if admin exists
+        admin_exists = await db.users.find_one({"username": "admin-bano"}, {"_id": 0})
+        if not admin_exists:
+            # Create admin user
+            hashed_password = pwd_context.hash("India@54321")
+            admin_user = {
+                "id": str(uuid.uuid4()),
+                "username": "admin-bano",
+                "email": "admin@banofresh.com",
+                "full_name": "Bano Fresh Admin",
+                "is_admin": True,
+                "created_at": datetime.now(timezone.utc).isoformat()
+            }
+            admin_user['password'] = hashed_password
+            await db.users.insert_one(admin_user)
+            logger.info("✅ Admin user created: admin-bano")
+        else:
+            logger.info("✅ Admin user already exists")
+    except Exception as e:
+        logger.error(f"Error creating admin user: {e}")
 
 @api_router.post("/auth/login", response_model=TokenResponse)
 async def login(user_input: UserLogin):
@@ -262,6 +255,74 @@ async def login(user_input: UserLogin):
 @api_router.get("/auth/me", response_model=User)
 async def get_me(current_user: User = Depends(get_current_user)):
     return current_user
+
+# Admin-only: Create new user
+class UserCreate(BaseModel):
+    username: str
+    email: EmailStr
+    password: str
+    full_name: str
+    is_admin: bool = False
+
+@api_router.post("/users", response_model=User)
+async def create_user(user_input: UserCreate, current_user: User = Depends(get_current_user)):
+    # Check if current user is admin
+    user_doc = await db.users.find_one({"id": current_user.id}, {"_id": 0})
+    if not user_doc.get('is_admin', False):
+        raise HTTPException(status_code=403, detail="Only admin can create users")
+    
+    # Check if user exists
+    existing = await db.users.find_one({"$or": [{"username": user_input.username}, {"email": user_input.email}]}, {"_id": 0})
+    if existing:
+        raise HTTPException(status_code=400, detail="Username or email already exists")
+    
+    # Hash password
+    hashed_password = pwd_context.hash(user_input.password)
+    
+    # Create user
+    user = User(
+        username=user_input.username,
+        email=user_input.email,
+        full_name=user_input.full_name
+    )
+    
+    user_doc = user.model_dump()
+    user_doc['password'] = hashed_password
+    user_doc['is_admin'] = user_input.is_admin
+    user_doc['created_at'] = user_doc['created_at'].isoformat()
+    
+    await db.users.insert_one(user_doc)
+    return user
+
+@api_router.get("/users", response_model=List[User])
+async def get_users(current_user: User = Depends(get_current_user)):
+    # Check if current user is admin
+    user_doc = await db.users.find_one({"id": current_user.id}, {"_id": 0})
+    if not user_doc.get('is_admin', False):
+        raise HTTPException(status_code=403, detail="Only admin can view users")
+    
+    users = await db.users.find({}, {"_id": 0, "password": 0}).to_list(1000)
+    for u in users:
+        if isinstance(u.get('created_at'), str):
+            u['created_at'] = datetime.fromisoformat(u['created_at'])
+    return users
+
+@api_router.delete("/users/{user_id}")
+async def delete_user(user_id: str, current_user: User = Depends(get_current_user)):
+    # Check if current user is admin
+    user_doc = await db.users.find_one({"id": current_user.id}, {"_id": 0})
+    if not user_doc.get('is_admin', False):
+        raise HTTPException(status_code=403, detail="Only admin can delete users")
+    
+    # Don't allow deleting admin user
+    target_user = await db.users.find_one({"id": user_id}, {"_id": 0})
+    if target_user and target_user.get('username') == 'admin-bano':
+        raise HTTPException(status_code=400, detail="Cannot delete admin user")
+    
+    result = await db.users.delete_one({"id": user_id})
+    if result.deleted_count == 0:
+        raise HTTPException(status_code=404, detail="User not found")
+    return {"message": "User deleted successfully"}
 
 # ========== PRODUCTS ==========
 
