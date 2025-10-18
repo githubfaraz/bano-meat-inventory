@@ -51,6 +51,7 @@ class User(BaseModel):
     username: str
     email: str
     full_name: str
+    is_admin: bool = False
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
 class TokenResponse(BaseModel):
