@@ -25,7 +25,7 @@ client = AsyncIOMotorClient(
     mongo_url,
     tls=True,
     tlsCAFile=certifi.where(),
-    tlsAllowInvalidCertificates=True,
+    tlsAllowInvalidCertificates='true',
     serverSelectionTimeoutMS=30000,
     connectTimeoutMS=30000,
     socketTimeoutMS=30000
