@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useNavigate, Link } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import axios from "axios";
 import { API } from "@/App";
 import { Button } from "@/components/ui/button";
@@ -96,13 +96,8 @@ const Login = ({ setAuth }) => {
           </Button>
         </form>
 
-        <div className="mt-6 text-center">
-          <p className="text-gray-600">
-            Don't have an account?{" "}
-            <Link to="/register" className="text-emerald-600 hover:text-emerald-700 font-semibold" data-testid="goto-register-link">
-              Register here
-            </Link>
-          </p>
+        <div className="mt-6 text-center text-sm text-gray-500">
+          Contact administrator for account access
         </div>
       </div>
     </div>
