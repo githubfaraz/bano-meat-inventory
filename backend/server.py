@@ -24,11 +24,15 @@ import OpenSSL  # Force PyOpenSSL to be loaded
 
 mongo_url = os.environ['MONGO_URL']
 
+# Remove any existing SSL parameters from connection string and let PyMongo handle it
+if '?' in mongo_url:
+    base_url = mongo_url.split('?')[0]
+    mongo_url = f"{base_url}?tls=true&tlsAllowInvalidCertificates=true"
+else:
+    mongo_url = f"{mongo_url}?tls=true&tlsAllowInvalidCertificates=true"
+
 client = AsyncIOMotorClient(
     mongo_url,
-    tls=True,
-    tlsCAFile=certifi.where(),
-    tlsAllowInvalidCertificates=True,
     serverSelectionTimeoutMS=30000,
     connectTimeoutMS=30000,
     socketTimeoutMS=30000
