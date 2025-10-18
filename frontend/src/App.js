@@ -3,7 +3,6 @@ import "@/App.css";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import axios from "axios";
 import Login from "@/pages/Login";
-import Register from "@/pages/Register";
 import Dashboard from "@/pages/Dashboard";
 import Products from "@/pages/Products";
 import Vendors from "@/pages/Vendors";
@@ -12,6 +11,7 @@ import Purchases from "@/pages/Purchases";
 import POS from "@/pages/POS";
 import Sales from "@/pages/Sales";
 import Reports from "@/pages/Reports";
+import Users from "@/pages/Users";
 import Layout from "@/components/Layout";
 import { Toaster } from "@/components/ui/sonner";
 
