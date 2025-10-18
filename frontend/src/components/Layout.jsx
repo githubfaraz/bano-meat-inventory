@@ -1,5 +1,5 @@
 import { Outlet, Link, useLocation, useNavigate } from "react-router-dom";
-import { LayoutDashboard, Package, Users, ShoppingCart, TrendingUp, LogOut, Store, ShoppingBag, FileText } from "lucide-react";
+import { LayoutDashboard, Package, Users, ShoppingCart, TrendingUp, LogOut, Store, ShoppingBag, FileText, UserCog } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 
