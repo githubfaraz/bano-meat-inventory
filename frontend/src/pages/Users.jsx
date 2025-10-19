@@ -21,9 +21,19 @@ const Users = () => {
     is_admin: false,
   });
 
+  // Check if current user is admin
+  const currentUser = JSON.parse(localStorage.getItem("user") || "{}");
+  const isAdmin = currentUser?.is_admin || false;
+
   useEffect(() => {
+    // If not admin, show error and don't fetch
+    if (!isAdmin) {
+      toast.error("Access denied: Only admin users can manage users");
+      setLoading(false);
+      return;
+    }
     fetchUsers();
-  }, []);
+  }, [isAdmin]);
 
   const fetchUsers = async () => {
     try {
