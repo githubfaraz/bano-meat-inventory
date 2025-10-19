@@ -49,25 +49,27 @@ const Layout = ({ setAuth }) => {
         </div>
 
         <nav className="flex-1 p-4 space-y-2">
-          {navItems.map((item) => {
-            const Icon = item.icon;
-            const isActive = location.pathname === item.path;
-            return (
-              <Link
-                key={item.path}
-                to={item.path}
-                className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${
-                  isActive
-                    ? "bg-emerald-50 text-emerald-600 font-semibold"
-                    : "text-gray-700 hover:bg-gray-100"
-                }`}
-                data-testid={`nav-${item.label.toLowerCase()}`}
-              >
-                <Icon className="h-5 w-5" />
-                {item.label}
-              </Link>
-            );
-          })}
+          {navItems
+            .filter((item) => !item.adminOnly || isAdmin)
+            .map((item) => {
+              const Icon = item.icon;
+              const isActive = location.pathname === item.path;
+              return (
+                <Link
+                  key={item.path}
+                  to={item.path}
+                  className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${
+                    isActive
+                      ? "bg-emerald-50 text-emerald-600 font-semibold"
+                      : "text-gray-700 hover:bg-gray-100"
+                  }`}
+                  data-testid={`nav-${item.label.toLowerCase()}`}
+                >
+                  <Icon className="h-5 w-5" />
+                  {item.label}
+                </Link>
+              );
+            })}
         </nav>
 
         <div className="p-4 border-t border-gray-200">
