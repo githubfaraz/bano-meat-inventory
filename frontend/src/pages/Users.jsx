@@ -21,9 +21,19 @@ const Users = () => {
     is_admin: false,
   });
 
+  // Check if current user is admin
+  const currentUser = JSON.parse(localStorage.getItem("user") || "{}");
+  const isAdmin = currentUser?.is_admin || false;
+
   useEffect(() => {
+    // If not admin, show error and don't fetch
+    if (!isAdmin) {
+      toast.error("Access denied: Only admin users can manage users");
+      setLoading(false);
+      return;
+    }
     fetchUsers();
-  }, []);
+  }, [isAdmin]);
 
   const fetchUsers = async () => {
     try {
@@ -72,6 +82,28 @@ const Users = () => {
 
   if (loading) {
     return <div className="p-8">Loading users...</div>;
+  }
+
+  // If not admin, show access denied message
+  if (!isAdmin) {
+    return (
+      <div className="p-8">
+        <Card className="max-w-md mx-auto mt-20">
+          <CardHeader>
+            <CardTitle className="text-center text-red-600">Access Denied</CardTitle>
+          </CardHeader>
+          <CardContent className="text-center">
+            <Shield className="h-16 w-16 mx-auto mb-4 text-red-400" />
+            <p className="text-gray-600 mb-4">
+              Only administrators can access user management.
+            </p>
+            <p className="text-sm text-gray-500">
+              Please contact your system administrator if you need access.
+            </p>
+          </CardContent>
+        </Card>
+      </div>
+    );
   }
 
   return (
