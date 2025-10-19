@@ -6,6 +6,10 @@ import { toast } from "sonner";
 const Layout = ({ setAuth }) => {
   const location = useLocation();
   const navigate = useNavigate();
+  
+  // Get current user from localStorage
+  const user = JSON.parse(localStorage.getItem("user") || "{}");
+  const isAdmin = user?.is_admin || false;
 
   const handleLogout = () => {
     localStorage.removeItem("token");
@@ -24,7 +28,7 @@ const Layout = ({ setAuth }) => {
     { path: "/pos", icon: ShoppingCart, label: "POS" },
     { path: "/sales", icon: TrendingUp, label: "Sales" },
     { path: "/reports", icon: FileText, label: "Reports" },
-    { path: "/users", icon: UserCog, label: "Users" },
+    { path: "/users", icon: UserCog, label: "Users", adminOnly: true },
   ];
 
   return (
