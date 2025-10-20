@@ -111,34 +111,6 @@ const Layout = ({ setAuth }) => {
                 );
               })}
           </div>
-
-          {/* Old System (Legacy) */}
-          <div className="mb-4">
-            <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2 px-4">
-              Legacy (Old System)
-            </p>
-            {navItems
-              .filter((item) => item.section === "old")
-              .map((item) => {
-                const Icon = item.icon;
-                const isActive = location.pathname === item.path;
-                return (
-                  <Link
-                    key={item.path}
-                    to={item.path}
-                    className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${
-                      isActive
-                        ? "bg-gray-100 text-gray-600 font-semibold"
-                        : "text-gray-500 hover:bg-gray-50"
-                    }`}
-                    data-testid={`nav-${item.label.toLowerCase()}`}
-                  >
-                    <Icon className="h-5 w-5" />
-                    {item.label}
-                  </Link>
-                );
-              })}
-          </div>
         </nav>
 
         <div className="p-4 border-t border-gray-200">
