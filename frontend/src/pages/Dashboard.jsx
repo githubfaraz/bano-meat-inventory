@@ -92,6 +92,10 @@ const Dashboard = () => {
         </Card>
       </div>
 
+      {/* Inventory Summary - New Section */}
+      <InventorySummarySection />
+
+
       {/* Recent Sales */}
       <Card>
         <CardHeader>
