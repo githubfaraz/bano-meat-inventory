@@ -1231,6 +1231,352 @@ async def get_profit_loss_report(
 
 # ========== ROOT ==========
 
+
+# ========== NEW INVENTORY SYSTEM ENDPOINTS ==========
+
+# Main Categories Management
+@api_router.get("/main-categories", response_model=List[MainCategory])
+async def get_main_categories(current_user: User = Depends(get_current_user)):
+    categories = await db.main_categories.find({}, {"_id": 0}).to_list(length=None)
+    return categories
+
+@api_router.post("/main-categories", response_model=MainCategory)
+async def create_main_category(category: MainCategoryCreate, current_user: User = Depends(get_current_user)):
+    # Check if user is admin
+    user_doc = await db.users.find_one({"id": current_user.id}, {"_id": 0})
+    if not user_doc.get('is_admin', False):
+        raise HTTPException(status_code=403, detail="Only admin can create main categories")
+    
+    # Check if category already exists
+    existing = await db.main_categories.find_one({"name": category.name}, {"_id": 0})
+    if existing:
+        raise HTTPException(status_code=400, detail="Category with this name already exists")
+    
+    new_category = MainCategory(**category.dict())
+    await db.main_categories.insert_one(new_category.dict())
+    logger.info(f"Main category created: {new_category.name}")
+    return new_category
+
+@api_router.put("/main-categories/{category_id}", response_model=MainCategory)
+async def update_main_category(category_id: str, category: MainCategoryCreate, current_user: User = Depends(get_current_user)):
+    # Check if user is admin
+    user_doc = await db.users.find_one({"id": current_user.id}, {"_id": 0})
+    if not user_doc.get('is_admin', False):
+        raise HTTPException(status_code=403, detail="Only admin can update main categories")
+    
+    existing = await db.main_categories.find_one({"id": category_id}, {"_id": 0})
+    if not existing:
+        raise HTTPException(status_code=404, detail="Category not found")
+    
+    update_data = category.dict()
+    update_data["updated_at"] = datetime.now(timezone.utc)
+    
+    await db.main_categories.update_one({"id": category_id}, {"$set": update_data})
+    
+    updated = await db.main_categories.find_one({"id": category_id}, {"_id": 0})
+    return MainCategory(**updated)
+
+@api_router.delete("/main-categories/{category_id}")
+async def delete_main_category(category_id: str, current_user: User = Depends(get_current_user)):
+    # Check if user is admin
+    user_doc = await db.users.find_one({"id": current_user.id}, {"_id": 0})
+    if not user_doc.get('is_admin', False):
+        raise HTTPException(status_code=403, detail="Only admin can delete main categories")
+    
+    # Check if category has derived products
+    derived_count = await db.derived_products.count_documents({"main_category_id": category_id})
+    if derived_count > 0:
+        raise HTTPException(status_code=400, detail=f"Cannot delete category with {derived_count} derived products")
+    
+    result = await db.main_categories.delete_one({"id": category_id})
+    if result.deleted_count == 0:
+        raise HTTPException(status_code=404, detail="Category not found")
+    
+    return {"message": "Category deleted successfully"}
+
+# Derived Products Management
+@api_router.get("/derived-products", response_model=List[DerivedProduct])
+async def get_derived_products(main_category_id: Optional[str] = None, current_user: User = Depends(get_current_user)):
+    query = {}
+    if main_category_id:
+        query["main_category_id"] = main_category_id
+    
+    products = await db.derived_products.find(query, {"_id": 0}).to_list(length=None)
+    return products
+
+@api_router.post("/derived-products", response_model=DerivedProduct)
+async def create_derived_product(product: DerivedProductCreate, current_user: User = Depends(get_current_user)):
+    # Check if user is admin
+    user_doc = await db.users.find_one({"id": current_user.id}, {"_id": 0})
+    if not user_doc.get('is_admin', False):
+        raise HTTPException(status_code=403, detail="Only admin can create derived products")
+    
+    # Check if main category exists
+    category = await db.main_categories.find_one({"id": product.main_category_id}, {"_id": 0})
+    if not category:
+        raise HTTPException(status_code=404, detail="Main category not found")
+    
+    # Check if SKU already exists
+    existing_sku = await db.derived_products.find_one({"sku": product.sku}, {"_id": 0})
+    if existing_sku:
+        raise HTTPException(status_code=400, detail="Product with this SKU already exists")
+    
+    new_product = DerivedProduct(**product.dict())
+    await db.derived_products.insert_one(new_product.dict())
+    logger.info(f"Derived product created: {new_product.name} (SKU: {new_product.sku})")
+    return new_product
+
+@api_router.put("/derived-products/{product_id}", response_model=DerivedProduct)
+async def update_derived_product(product_id: str, product: DerivedProductCreate, current_user: User = Depends(get_current_user)):
+    # Check if user is admin
+    user_doc = await db.users.find_one({"id": current_user.id}, {"_id": 0})
+    if not user_doc.get('is_admin', False):
+        raise HTTPException(status_code=403, detail="Only admin can update derived products")
+    
+    existing = await db.derived_products.find_one({"id": product_id}, {"_id": 0})
+    if not existing:
+        raise HTTPException(status_code=404, detail="Product not found")
+    
+    # Check if SKU is being changed and if new SKU already exists
+    if product.sku != existing.get("sku"):
+        existing_sku = await db.derived_products.find_one({"sku": product.sku, "id": {"$ne": product_id}}, {"_id": 0})
+        if existing_sku:
+            raise HTTPException(status_code=400, detail="Product with this SKU already exists")
+    
+    update_data = product.dict()
+    update_data["updated_at"] = datetime.now(timezone.utc)
+    
+    await db.derived_products.update_one({"id": product_id}, {"$set": update_data})
+    
+    updated = await db.derived_products.find_one({"id": product_id}, {"_id": 0})
+    return DerivedProduct(**updated)
+
+@api_router.delete("/derived-products/{product_id}")
+async def delete_derived_product(product_id: str, current_user: User = Depends(get_current_user)):
+    # Check if user is admin
+    user_doc = await db.users.find_one({"id": current_user.id}, {"_id": 0})
+    if not user_doc.get('is_admin', False):
+        raise HTTPException(status_code=403, detail="Only admin can delete derived products")
+    
+    result = await db.derived_products.delete_one({"id": product_id})
+    if result.deleted_count == 0:
+        raise HTTPException(status_code=404, detail="Product not found")
+    
+    return {"message": "Product deleted successfully"}
+
+# Inventory Purchases Management
+@api_router.get("/inventory-purchases", response_model=List[InventoryPurchase])
+async def get_inventory_purchases(main_category_id: Optional[str] = None, current_user: User = Depends(get_current_user)):
+    query = {}
+    if main_category_id:
+        query["main_category_id"] = main_category_id
+    
+    purchases = await db.inventory_purchases.find(query, {"_id": 0}).sort("purchase_date", -1).to_list(length=None)
+    return purchases
+
+@api_router.post("/inventory-purchases", response_model=InventoryPurchase)
+async def create_inventory_purchase(purchase: InventoryPurchaseCreate, current_user: User = Depends(get_current_user)):
+    # Get main category
+    category = await db.main_categories.find_one({"id": purchase.main_category_id}, {"_id": 0})
+    if not category:
+        raise HTTPException(status_code=404, detail="Main category not found")
+    
+    # Get vendor
+    vendor = await db.vendors.find_one({"id": purchase.vendor_id}, {"_id": 0})
+    if not vendor:
+        raise HTTPException(status_code=404, detail="Vendor not found")
+    
+    # Calculate total cost
+    total_cost = purchase.total_weight_kg * purchase.cost_per_kg
+    
+    new_purchase = InventoryPurchase(
+        **purchase.dict(),
+        main_category_name=category["name"],
+        vendor_name=vendor["name"],
+        remaining_weight_kg=purchase.total_weight_kg,
+        remaining_pieces=purchase.total_pieces,
+        total_cost=total_cost
+    )
+    
+    await db.inventory_purchases.insert_one(new_purchase.dict())
+    logger.info(f"Inventory purchase created: {category['name']} - {purchase.total_weight_kg}kg from {vendor['name']}")
+    return new_purchase
+
+@api_router.get("/inventory-summary", response_model=List[InventorySummary])
+async def get_inventory_summary(current_user: User = Depends(get_current_user)):
+    # Get all main categories
+    categories = await db.main_categories.find({}, {"_id": 0}).to_list(length=None)
+    
+    summary = []
+    for category in categories:
+        # Get all purchases for this category
+        purchases = await db.inventory_purchases.find(
+            {"main_category_id": category["id"]},
+            {"_id": 0}
+        ).to_list(length=None)
+        
+        total_weight = sum(p.get("remaining_weight_kg", 0) for p in purchases)
+        total_pieces = sum(p.get("remaining_pieces", 0) for p in purchases if p.get("remaining_pieces") is not None)
+        
+        summary.append(InventorySummary(
+            main_category_id=category["id"],
+            main_category_name=category["name"],
+            total_weight_kg=round(total_weight, 2),
+            total_pieces=total_pieces,
+            low_stock=total_weight < 10  # Alert if less than 10kg
+        ))
+    
+    return summary
+
+# Daily Pieces Tracking
+@api_router.get("/daily-pieces-tracking", response_model=List[DailyPiecesTracking])
+async def get_daily_pieces_tracking(
+    main_category_id: Optional[str] = None,
+    start_date: Optional[str] = None,
+    end_date: Optional[str] = None,
+    current_user: User = Depends(get_current_user)
+):
+    query = {}
+    if main_category_id:
+        query["main_category_id"] = main_category_id
+    if start_date and end_date:
+        query["tracking_date"] = {"$gte": start_date, "$lte": end_date}
+    elif start_date:
+        query["tracking_date"] = {"$gte": start_date}
+    
+    tracking = await db.daily_pieces_tracking.find(query, {"_id": 0}).sort("tracking_date", -1).to_list(length=None)
+    return tracking
+
+@api_router.post("/daily-pieces-tracking", response_model=DailyPiecesTracking)
+async def create_daily_pieces_tracking(tracking: DailyPiecesTrackingCreate, current_user: User = Depends(get_current_user)):
+    # Get main category
+    category = await db.main_categories.find_one({"id": tracking.main_category_id}, {"_id": 0})
+    if not category:
+        raise HTTPException(status_code=404, detail="Main category not found")
+    
+    # Determine tracking date
+    tracking_date = tracking.tracking_date if tracking.tracking_date else datetime.now(timezone.utc).strftime("%Y-%m-%d")
+    
+    # Check if already tracked for this date and category
+    existing = await db.daily_pieces_tracking.find_one({
+        "main_category_id": tracking.main_category_id,
+        "tracking_date": tracking_date
+    }, {"_id": 0})
+    
+    if existing:
+        raise HTTPException(status_code=400, detail="Pieces already tracked for this category and date. Please update instead.")
+    
+    # Get all inventory purchases for this category and deduct pieces
+    purchases = await db.inventory_purchases.find(
+        {"main_category_id": tracking.main_category_id},
+        {"_id": 0}
+    ).sort("purchase_date", 1).to_list(length=None)
+    
+    pieces_to_deduct = tracking.pieces_sold
+    for purchase in purchases:
+        if pieces_to_deduct <= 0:
+            break
+        
+        remaining = purchase.get("remaining_pieces", 0)
+        if remaining and remaining > 0:
+            deduction = min(remaining, pieces_to_deduct)
+            new_remaining = remaining - deduction
+            pieces_to_deduct -= deduction
+            
+            await db.inventory_purchases.update_one(
+                {"id": purchase["id"]},
+                {"$set": {"remaining_pieces": new_remaining}}
+            )
+    
+    if pieces_to_deduct > 0:
+        logger.warning(f"Not enough pieces in inventory. {pieces_to_deduct} pieces could not be deducted.")
+    
+    new_tracking = DailyPiecesTracking(
+        main_category_id=tracking.main_category_id,
+        main_category_name=category["name"],
+        tracking_date=tracking_date,
+        pieces_sold=tracking.pieces_sold
+    )
+    
+    await db.daily_pieces_tracking.insert_one(new_tracking.dict())
+    logger.info(f"Daily pieces tracking created: {category['name']} - {tracking.pieces_sold} pieces on {tracking_date}")
+    return new_tracking
+
+# New POS Sales
+@api_router.post("/pos-sales", response_model=POSSaleNew)
+async def create_pos_sale(sale: POSSaleCreateNew, current_user: User = Depends(get_current_user)):
+    # Validate all derived products and main categories
+    for item in sale.items:
+        # Check derived product exists
+        product = await db.derived_products.find_one({"id": item.derived_product_id}, {"_id": 0})
+        if not product:
+            raise HTTPException(status_code=404, detail=f"Derived product {item.derived_product_id} not found")
+        
+        # Check main category exists
+        category = await db.main_categories.find_one({"id": item.main_category_id}, {"_id": 0})
+        if not category:
+            raise HTTPException(status_code=404, detail=f"Main category {item.main_category_id} not found")
+    
+    # Deduct inventory weight from purchases (FIFO)
+    for item in sale.items:
+        weight_to_deduct = item.quantity_kg
+        
+        # Get all purchases for this main category, sorted by purchase date (FIFO)
+        purchases = await db.inventory_purchases.find(
+            {"main_category_id": item.main_category_id},
+            {"_id": 0}
+        ).sort("purchase_date", 1).to_list(length=None)
+        
+        for purchase in purchases:
+            if weight_to_deduct <= 0:
+                break
+            
+            remaining = purchase.get("remaining_weight_kg", 0)
+            if remaining > 0:
+                deduction = min(remaining, weight_to_deduct)
+                new_remaining = remaining - deduction
+                weight_to_deduct -= deduction
+                
+                await db.inventory_purchases.update_one(
+                    {"id": purchase["id"]},
+                    {"$set": {"remaining_weight_kg": round(new_remaining, 2)}}
+                )
+        
+        if weight_to_deduct > 0:
+            logger.warning(f"Not enough inventory for {item.main_category_name}. {weight_to_deduct}kg could not be deducted.")
+    
+    # Create sale record
+    new_sale = POSSaleNew(**sale.dict())
+    await db.pos_sales.insert_one(new_sale.dict())
+    
+    # Update customer total purchases if customer provided
+    if sale.customer_id:
+        await db.customers.update_one(
+            {"id": sale.customer_id},
+            {"$inc": {"total_purchases": sale.total}}
+        )
+    
+    logger.info(f"POS sale created: Total {sale.total}")
+    return new_sale
+
+@api_router.get("/pos-sales", response_model=List[POSSaleNew])
+async def get_pos_sales(
+    start_date: Optional[str] = None,
+    end_date: Optional[str] = None,
+    current_user: User = Depends(get_current_user)
+):
+    query = {}
+    if start_date and end_date:
+        query["sale_date"] = {
+            "$gte": datetime.fromisoformat(start_date),
+            "$lte": datetime.fromisoformat(end_date)
+        }
+    
+    sales = await db.pos_sales.find(query, {"_id": 0}).sort("sale_date", -1).to_list(length=None)
+    return sales
+
+
+
 @api_router.get("/")
 async def root():
     return {"message": "Meat Inventory API"}
