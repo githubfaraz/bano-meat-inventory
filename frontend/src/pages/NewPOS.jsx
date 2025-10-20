@@ -123,6 +123,97 @@ const NewPOS = () => {
     };
   };
 
+  const printReceipt = (saleData) => {
+    const totals = calculateTotals();
+    const customerName = selectedCustomer === "walk-in" 
+      ? "Walk-in Customer" 
+      : customers.find((c) => c.id === selectedCustomer)?.name;
+    
+    const receiptContent = `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <title>Receipt - Bano Fresh</title>
+        <style>
+          body { font-family: Arial, sans-serif; margin: 20px; }
+          .header { text-align: center; margin-bottom: 20px; }
+          .header h1 { margin: 0; color: #059669; }
+          .info { margin-bottom: 20px; }
+          .items table { width: 100%; border-collapse: collapse; margin: 20px 0; }
+          .items th, .items td { padding: 8px; text-align: left; border-bottom: 1px solid #ddd; }
+          .items th { background-color: #f3f4f6; }
+          .totals { margin-top: 20px; text-align: right; }
+          .totals div { margin: 5px 0; }
+          .total-final { font-size: 1.2em; font-weight: bold; color: #059669; }
+          .footer { margin-top: 30px; text-align: center; font-size: 0.9em; color: #6b7280; }
+          @media print {
+            body { margin: 0; }
+          }
+        </style>
+      </head>
+      <body>
+        <div class="header">
+          <h1>BANO FRESH</h1>
+          <p>Premium Meat Shop</p>
+          <p style="font-size: 0.9em;">Date: ${new Date().toLocaleString()}</p>
+        </div>
+        
+        <div class="info">
+          <strong>Customer:</strong> ${customerName}<br>
+          <strong>Payment Method:</strong> ${paymentMethod.toUpperCase()}
+        </div>
+        
+        <div class="items">
+          <table>
+            <thead>
+              <tr>
+                <th>Item</th>
+                <th>Category</th>
+                <th>Qty (kg)</th>
+                <th>Price/kg</th>
+                <th>Total</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${cart.map(item => `
+                <tr>
+                  <td>${item.derived_product_name}</td>
+                  <td>${item.main_category_name}</td>
+                  <td>${item.quantity_kg}</td>
+                  <td>₹${item.selling_price}</td>
+                  <td>₹${item.total.toFixed(2)}</td>
+                </tr>
+              `).join('')}
+            </tbody>
+          </table>
+        </div>
+        
+        <div class="totals">
+          <div>Subtotal: ₹${totals.subtotal}</div>
+          <div style="color: #dc2626;">Discount (${discount}%): -₹${totals.discountAmount}</div>
+          <div>Tax (${taxRate}%): ₹${totals.taxAmount}</div>
+          <div class="total-final">Total: ₹${totals.total}</div>
+        </div>
+        
+        <div class="footer">
+          <p>Thank you for shopping with Bano Fresh!</p>
+          <p>Visit us again</p>
+        </div>
+        
+        <script>
+          window.onload = function() {
+            window.print();
+          }
+        </script>
+      </body>
+      </html>
+    `;
+    
+    const printWindow = window.open('', '_blank');
+    printWindow.document.write(receiptContent);
+    printWindow.document.close();
+  };
+
   const handleCheckout = async () => {
     if (cart.length === 0) {
       toast.error("Cart is empty");
@@ -150,6 +241,9 @@ const NewPOS = () => {
       });
 
       toast.success("Sale completed successfully!");
+      
+      // Print receipt
+      printReceipt(saleData);
       
       // Reset form
       setCart([]);
