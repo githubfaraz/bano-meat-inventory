@@ -12,6 +12,12 @@ import POS from "@/pages/POS";
 import Sales from "@/pages/Sales";
 import Reports from "@/pages/Reports";
 import Users from "@/pages/Users";
+// New Inventory System Components
+import MainCategories from "@/pages/MainCategories";
+import DerivedProducts from "@/pages/DerivedProducts";
+import InventoryManagement from "@/pages/InventoryManagement";
+import DailyPiecesTracking from "@/pages/DailyPiecesTracking";
+import NewPOS from "@/pages/NewPOS";
 import Layout from "@/components/Layout";
 import { Toaster } from "@/components/ui/sonner";
 
