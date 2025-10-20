@@ -2,8 +2,105 @@ import { useEffect, useState } from "react";
 import axios from "axios";
 import { API } from "@/App";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { DollarSign, Package, Users, AlertTriangle } from "lucide-react";
+import { DollarSign, Package, Users, AlertTriangle, Weight } from "lucide-react";
 import { toast } from "sonner";
+
+// New Inventory Summary Component
+const InventorySummarySection = () => {
+  const [inventory, setInventory] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const API_URL = process.env.REACT_APP_BACKEND_URL || "http://localhost:8001";
+
+  useEffect(() => {
+    fetchInventory();
+  }, []);
+
+  const fetchInventory = async () => {
+    try {
+      const token = localStorage.getItem("token");
+      const response = await axios.get(`${API_URL}/api/inventory-summary`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      setInventory(response.data);
+    } catch (error) {
+      console.error("Failed to fetch inventory");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  if (loading) {
+    return (
+      <Card className="mb-8">
+        <CardHeader>
+          <CardTitle className="text-xl">Current Inventory</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <p className="text-center text-gray-500 py-4">Loading inventory...</p>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  return (
+    <Card className="mb-8">
+      <CardHeader>
+        <CardTitle className="text-xl flex items-center gap-2">
+          <Weight className="h-5 w-5 text-emerald-600" />
+          Current Inventory
+        </CardTitle>
+      </CardHeader>
+      <CardContent>
+        {inventory.length > 0 ? (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {inventory.map((item) => (
+              <div
+                key={item.main_category_id}
+                className={`p-4 rounded-lg border-2 ${
+                  item.low_stock
+                    ? "bg-red-50 border-red-200"
+                    : "bg-emerald-50 border-emerald-200"
+                }`}
+              >
+                <div className="flex items-center justify-between mb-2">
+                  <h3 className="font-bold text-lg text-gray-800">
+                    {item.main_category_name}
+                  </h3>
+                  {item.low_stock && (
+                    <AlertTriangle className="h-5 w-5 text-red-600" />
+                  )}
+                </div>
+                <div className="space-y-1">
+                  <div className="flex justify-between">
+                    <span className="text-sm text-gray-600">Weight:</span>
+                    <span className="font-semibold text-emerald-700">
+                      {item.total_weight_kg} kg
+                    </span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-sm text-gray-600">Pieces:</span>
+                    <span className="font-semibold text-blue-700">
+                      {item.total_pieces}
+                    </span>
+                  </div>
+                </div>
+                {item.low_stock && (
+                  <p className="text-xs text-red-600 mt-2 font-medium">
+                    ⚠ Low Stock Alert
+                  </p>
+                )}
+              </div>
+            ))}
+          </div>
+        ) : (
+          <p className="text-gray-500 text-center py-8">
+            No inventory data available. Start by adding purchases!
+          </p>
+        )}
+      </CardContent>
+    </Card>
+  );
+};
 
 const Dashboard = () => {
   const [stats, setStats] = useState(null);
