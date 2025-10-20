@@ -1,5 +1,8 @@
 import { Outlet, Link, useLocation, useNavigate } from "react-router-dom";
-import { LayoutDashboard, Package, Users, ShoppingCart, TrendingUp, LogOut, Store, ShoppingBag, FileText, UserCog } from "lucide-react";
+import { 
+  LayoutDashboard, Package, Users, ShoppingCart, TrendingUp, LogOut, Store, 
+  ShoppingBag, FileText, UserCog, List, Box, Warehouse, PieChart 
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 
@@ -21,14 +24,21 @@ const Layout = ({ setAuth }) => {
 
   const navItems = [
     { path: "/", icon: LayoutDashboard, label: "Dashboard" },
-    { path: "/products", icon: Package, label: "Products" },
-    { path: "/vendors", icon: Store, label: "Vendors" },
-    { path: "/customers", icon: Users, label: "Customers" },
-    { path: "/purchases", icon: ShoppingBag, label: "Purchases" },
-    { path: "/pos", icon: ShoppingCart, label: "POS" },
-    { path: "/sales", icon: TrendingUp, label: "Sales" },
-    { path: "/reports", icon: FileText, label: "Reports" },
-    { path: "/users", icon: UserCog, label: "Users", adminOnly: true },
+    // Inventory System (New)
+    { path: "/main-categories", icon: List, label: "Main Categories", section: "new", adminOnly: true },
+    { path: "/derived-products", icon: Box, label: "Derived Products", section: "new", adminOnly: true },
+    { path: "/inventory-management", icon: Warehouse, label: "Inventory", section: "new" },
+    { path: "/daily-pieces-tracking", icon: PieChart, label: "Daily Tracking", section: "new" },
+    { path: "/new-pos", icon: ShoppingCart, label: "New POS", section: "new" },
+    // Old System (Legacy - can be removed later)
+    { path: "/products", icon: Package, label: "Products (Old)", section: "old" },
+    { path: "/purchases", icon: ShoppingBag, label: "Purchases (Old)", section: "old" },
+    { path: "/pos", icon: ShoppingCart, label: "POS (Old)", section: "old" },
+    { path: "/sales", icon: TrendingUp, label: "Sales", section: "common" },
+    { path: "/vendors", icon: Store, label: "Vendors", section: "common" },
+    { path: "/customers", icon: Users, label: "Customers", section: "common" },
+    { path: "/reports", icon: FileText, label: "Reports", section: "common" },
+    { path: "/users", icon: UserCog, label: "Users", adminOnly: true, section: "common" },
   ];
 
   return (
