@@ -15,7 +15,10 @@ const Sales = () => {
 
   const fetchSales = async () => {
     try {
-      const response = await axios.get(`${API}/sales`);
+      const token = localStorage.getItem("token");
+      const response = await axios.get(`${API}/pos-sales`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
       setSales(response.data);
     } catch (error) {
       toast.error("Failed to fetch sales");
