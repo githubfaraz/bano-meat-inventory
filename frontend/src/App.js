@@ -76,6 +76,12 @@ function App() {
             <Route path="sales" element={<Sales />} />
             <Route path="reports" element={<Reports />} />
             <Route path="users" element={<Users />} />
+            {/* New Inventory System Routes */}
+            <Route path="main-categories" element={<MainCategories />} />
+            <Route path="derived-products" element={<DerivedProducts />} />
+            <Route path="inventory-management" element={<InventoryManagement />} />
+            <Route path="daily-pieces-tracking" element={<DailyPiecesTracking />} />
+            <Route path="new-pos" element={<NewPOS />} />
           </Route>
         </Routes>
       </BrowserRouter>
