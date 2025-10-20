@@ -1,5 +1,8 @@
 import { Outlet, Link, useLocation, useNavigate } from "react-router-dom";
-import { LayoutDashboard, Package, Users, ShoppingCart, TrendingUp, LogOut, Store, ShoppingBag, FileText, UserCog } from "lucide-react";
+import { 
+  LayoutDashboard, Package, Users, ShoppingCart, TrendingUp, LogOut, Store, 
+  ShoppingBag, FileText, UserCog, List, Box, Warehouse, PieChart 
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 
@@ -21,14 +24,21 @@ const Layout = ({ setAuth }) => {
 
   const navItems = [
     { path: "/", icon: LayoutDashboard, label: "Dashboard" },
-    { path: "/products", icon: Package, label: "Products" },
-    { path: "/vendors", icon: Store, label: "Vendors" },
-    { path: "/customers", icon: Users, label: "Customers" },
-    { path: "/purchases", icon: ShoppingBag, label: "Purchases" },
-    { path: "/pos", icon: ShoppingCart, label: "POS" },
-    { path: "/sales", icon: TrendingUp, label: "Sales" },
-    { path: "/reports", icon: FileText, label: "Reports" },
-    { path: "/users", icon: UserCog, label: "Users", adminOnly: true },
+    // Inventory System (New)
+    { path: "/main-categories", icon: List, label: "Main Categories", section: "new", adminOnly: true },
+    { path: "/derived-products", icon: Box, label: "Derived Products", section: "new", adminOnly: true },
+    { path: "/inventory-management", icon: Warehouse, label: "Inventory", section: "new" },
+    { path: "/daily-pieces-tracking", icon: PieChart, label: "Daily Tracking", section: "new" },
+    { path: "/new-pos", icon: ShoppingCart, label: "New POS", section: "new" },
+    // Old System (Legacy - can be removed later)
+    { path: "/products", icon: Package, label: "Products (Old)", section: "old" },
+    { path: "/purchases", icon: ShoppingBag, label: "Purchases (Old)", section: "old" },
+    { path: "/pos", icon: ShoppingCart, label: "POS (Old)", section: "old" },
+    { path: "/sales", icon: TrendingUp, label: "Sales", section: "common" },
+    { path: "/vendors", icon: Store, label: "Vendors", section: "common" },
+    { path: "/customers", icon: Users, label: "Customers", section: "common" },
+    { path: "/reports", icon: FileText, label: "Reports", section: "common" },
+    { path: "/users", icon: UserCog, label: "Users", adminOnly: true, section: "common" },
   ];
 
   return (
@@ -48,28 +58,90 @@ const Layout = ({ setAuth }) => {
           </div>
         </div>
 
-        <nav className="flex-1 p-4 space-y-2">
-          {navItems
-            .filter((item) => !item.adminOnly || isAdmin)
-            .map((item) => {
-              const Icon = item.icon;
-              const isActive = location.pathname === item.path;
-              return (
-                <Link
-                  key={item.path}
-                  to={item.path}
-                  className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${
-                    isActive
-                      ? "bg-emerald-50 text-emerald-600 font-semibold"
-                      : "text-gray-700 hover:bg-gray-100"
-                  }`}
-                  data-testid={`nav-${item.label.toLowerCase()}`}
-                >
-                  <Icon className="h-5 w-5" />
-                  {item.label}
-                </Link>
-              );
-            })}
+        <nav className="flex-1 p-4 space-y-2 overflow-y-auto">
+          {/* New Inventory System */}
+          <div className="mb-4">
+            <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2 px-4">
+              Inventory System
+            </p>
+            {navItems
+              .filter((item) => item.section === "new" && (!item.adminOnly || isAdmin))
+              .map((item) => {
+                const Icon = item.icon;
+                const isActive = location.pathname === item.path;
+                return (
+                  <Link
+                    key={item.path}
+                    to={item.path}
+                    className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${
+                      isActive
+                        ? "bg-emerald-50 text-emerald-600 font-semibold"
+                        : "text-gray-700 hover:bg-gray-100"
+                    }`}
+                    data-testid={`nav-${item.label.toLowerCase()}`}
+                  >
+                    <Icon className="h-5 w-5" />
+                    {item.label}
+                  </Link>
+                );
+              })}
+          </div>
+
+          {/* Common/General */}
+          <div className="mb-4">
+            <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2 px-4">
+              General
+            </p>
+            {navItems
+              .filter((item) => item.section === "common" && (!item.adminOnly || isAdmin))
+              .map((item) => {
+                const Icon = item.icon;
+                const isActive = location.pathname === item.path;
+                return (
+                  <Link
+                    key={item.path}
+                    to={item.path}
+                    className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${
+                      isActive
+                        ? "bg-emerald-50 text-emerald-600 font-semibold"
+                        : "text-gray-700 hover:bg-gray-100"
+                    }`}
+                    data-testid={`nav-${item.label.toLowerCase()}`}
+                  >
+                    <Icon className="h-5 w-5" />
+                    {item.label}
+                  </Link>
+                );
+              })}
+          </div>
+
+          {/* Old System (Legacy) */}
+          <div className="mb-4">
+            <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2 px-4">
+              Legacy (Old System)
+            </p>
+            {navItems
+              .filter((item) => item.section === "old")
+              .map((item) => {
+                const Icon = item.icon;
+                const isActive = location.pathname === item.path;
+                return (
+                  <Link
+                    key={item.path}
+                    to={item.path}
+                    className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${
+                      isActive
+                        ? "bg-gray-100 text-gray-600 font-semibold"
+                        : "text-gray-500 hover:bg-gray-50"
+                    }`}
+                    data-testid={`nav-${item.label.toLowerCase()}`}
+                  >
+                    <Icon className="h-5 w-5" />
+                    {item.label}
+                  </Link>
+                );
+              })}
+          </div>
         </nav>
 
         <div className="p-4 border-t border-gray-200">

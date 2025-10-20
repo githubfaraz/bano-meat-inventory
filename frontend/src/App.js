@@ -12,6 +12,12 @@ import POS from "@/pages/POS";
 import Sales from "@/pages/Sales";
 import Reports from "@/pages/Reports";
 import Users from "@/pages/Users";
+// New Inventory System Components
+import MainCategories from "@/pages/MainCategories";
+import DerivedProducts from "@/pages/DerivedProducts";
+import InventoryManagement from "@/pages/InventoryManagement";
+import DailyPiecesTracking from "@/pages/DailyPiecesTracking";
+import NewPOS from "@/pages/NewPOS";
 import Layout from "@/components/Layout";
 import { Toaster } from "@/components/ui/sonner";
 
@@ -70,6 +76,12 @@ function App() {
             <Route path="sales" element={<Sales />} />
             <Route path="reports" element={<Reports />} />
             <Route path="users" element={<Users />} />
+            {/* New Inventory System Routes */}
+            <Route path="main-categories" element={<MainCategories />} />
+            <Route path="derived-products" element={<DerivedProducts />} />
+            <Route path="inventory-management" element={<InventoryManagement />} />
+            <Route path="daily-pieces-tracking" element={<DailyPiecesTracking />} />
+            <Route path="new-pos" element={<NewPOS />} />
           </Route>
         </Routes>
       </BrowserRouter>
