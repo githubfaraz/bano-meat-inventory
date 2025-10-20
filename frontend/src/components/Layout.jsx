@@ -24,16 +24,13 @@ const Layout = ({ setAuth }) => {
 
   const navItems = [
     { path: "/", icon: LayoutDashboard, label: "Dashboard" },
-    // Inventory System (New)
+    // Inventory System
     { path: "/main-categories", icon: List, label: "Main Categories", section: "new", adminOnly: true },
     { path: "/derived-products", icon: Box, label: "Derived Products", section: "new", adminOnly: true },
     { path: "/inventory-management", icon: Warehouse, label: "Inventory", section: "new" },
     { path: "/daily-pieces-tracking", icon: PieChart, label: "Daily Tracking", section: "new" },
     { path: "/new-pos", icon: ShoppingCart, label: "New POS", section: "new" },
-    // Old System (Legacy - can be removed later)
-    { path: "/products", icon: Package, label: "Products (Old)", section: "old" },
-    { path: "/purchases", icon: ShoppingBag, label: "Purchases (Old)", section: "old" },
-    { path: "/pos", icon: ShoppingCart, label: "POS (Old)", section: "old" },
+    // General
     { path: "/sales", icon: TrendingUp, label: "Sales", section: "common" },
     { path: "/vendors", icon: Store, label: "Vendors", section: "common" },
     { path: "/customers", icon: Users, label: "Customers", section: "common" },
@@ -105,34 +102,6 @@ const Layout = ({ setAuth }) => {
                       isActive
                         ? "bg-emerald-50 text-emerald-600 font-semibold"
                         : "text-gray-700 hover:bg-gray-100"
-                    }`}
-                    data-testid={`nav-${item.label.toLowerCase()}`}
-                  >
-                    <Icon className="h-5 w-5" />
-                    {item.label}
-                  </Link>
-                );
-              })}
-          </div>
-
-          {/* Old System (Legacy) */}
-          <div className="mb-4">
-            <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2 px-4">
-              Legacy (Old System)
-            </p>
-            {navItems
-              .filter((item) => item.section === "old")
-              .map((item) => {
-                const Icon = item.icon;
-                const isActive = location.pathname === item.path;
-                return (
-                  <Link
-                    key={item.path}
-                    to={item.path}
-                    className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${
-                      isActive
-                        ? "bg-gray-100 text-gray-600 font-semibold"
-                        : "text-gray-500 hover:bg-gray-50"
                     }`}
                     data-testid={`nav-${item.label.toLowerCase()}`}
                   >
