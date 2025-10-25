@@ -94,8 +94,8 @@ class Product(BaseModel):
     is_raw_material: bool = False
     purchase_cost: float = 0.0
     derived_from: Optional[str] = None
-    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
-    updated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    created_at: datetime = Field(default_factory=get_ist_now)
+    updated_at: datetime = Field(default_factory=get_ist_now)
 
 class VendorCreate(BaseModel):
     name: str
@@ -285,8 +285,8 @@ class MainCategory(BaseModel):
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))
     name: str
     description: Optional[str] = None
-    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
-    updated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    created_at: datetime = Field(default_factory=get_ist_now)
+    updated_at: datetime = Field(default_factory=get_ist_now)
 
 class DerivedProductCreate(BaseModel):
     main_category_id: str
@@ -303,8 +303,8 @@ class DerivedProduct(BaseModel):
     sku: str
     selling_price: float
     description: Optional[str] = None
-    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
-    updated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    created_at: datetime = Field(default_factory=get_ist_now)
+    updated_at: datetime = Field(default_factory=get_ist_now)
 
 class InventoryPurchaseCreate(BaseModel):
     main_category_id: str
