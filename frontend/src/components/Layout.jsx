@@ -1,7 +1,7 @@
 import { Outlet, Link, useLocation, useNavigate } from "react-router-dom";
 import { 
   LayoutDashboard, Package, Users, ShoppingCart, TrendingUp, LogOut, Store, 
-  ShoppingBag, FileText, UserCog, List, Box, Warehouse, PieChart 
+  ShoppingBag, FileText, UserCog, List, Box, Warehouse, PieChart, Trash2 
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
