@@ -417,6 +417,14 @@ class POSSaleNew(BaseModel):
     payment_method: str
     sale_date: datetime = Field(default_factory=get_ist_now)
     created_at: datetime = Field(default_factory=get_ist_now)
+    
+    @field_serializer('sale_date', 'created_at')
+    def serialize_datetime(self, dt: datetime, _info):
+        """Serialize datetime with timezone info"""
+        if dt.tzinfo is None:
+            # If no timezone, assume IST
+            dt = IST.localize(dt)
+        return dt.isoformat()
 
 class InventorySummary(BaseModel):
     main_category_id: str
