@@ -404,6 +404,10 @@ class InventorySummary(BaseModel):
     total_weight_kg: float
     total_pieces: int
     low_stock: bool = False
+    today_waste_kg: float = 0.0
+    today_waste_percentage: float = 0.0
+    week_waste_kg: float = 0.0
+    week_waste_percentage: float = 0.0
 
 @api_router.post("/users", response_model=User)
 async def create_user(user_input: UserCreate, current_user: User = Depends(get_current_user)):
