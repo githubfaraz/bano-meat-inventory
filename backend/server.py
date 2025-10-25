@@ -189,7 +189,7 @@ class Purchase(BaseModel):
     unit: str
     cost_per_unit: float
     total_cost: float
-    purchase_date: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    purchase_date: datetime = Field(default_factory=get_ist_now)
     created_by: str
 
 # ========== AUTHENTICATION ==========
