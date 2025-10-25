@@ -10,12 +10,20 @@ from pydantic import BaseModel, Field, ConfigDict, EmailStr
 from typing import List, Optional
 import uuid
 from datetime import datetime, timezone, timedelta
+import pytz
 import bcrypt
 import jwt
 from passlib.context import CryptContext
 
 ROOT_DIR = Path(__file__).parent
 load_dotenv(ROOT_DIR / '.env')
+
+# Timezone Configuration
+IST = pytz.timezone('Asia/Kolkata')
+
+def get_ist_now():
+    """Get current time in IST timezone"""
+    return datetime.now(IST)
 
 # MongoDB connection
 mongo_url = os.environ['MONGO_URL']
@@ -335,7 +343,27 @@ class DailyPiecesTracking(BaseModel):
     main_category_name: str
     tracking_date: str  # YYYY-MM-DD format
     pieces_sold: int
-    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    created_at: datetime = Field(default_factory=get_ist_now)
+
+class DailyWasteTrackingCreate(BaseModel):
+    main_category_id: str
+    raw_weight_kg: float
+    dressed_weight_kg: float
+    notes: Optional[str] = None
+    tracking_date: Optional[str] = None  # YYYY-MM-DD format
+
+class DailyWasteTracking(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    main_category_id: str
+    main_category_name: str
+    tracking_date: str  # YYYY-MM-DD format
+    raw_weight_kg: float
+    dressed_weight_kg: float
+    waste_weight_kg: float
+    waste_percentage: float
+    notes: Optional[str] = None
+    created_at: datetime = Field(default_factory=get_ist_now)
 
 class POSSaleItemNew(BaseModel):
     derived_product_id: str
@@ -376,6 +404,10 @@ class InventorySummary(BaseModel):
     total_weight_kg: float
     total_pieces: int
     low_stock: bool = False
+    today_waste_kg: float = 0.0
+    today_waste_percentage: float = 0.0
+    week_waste_kg: float = 0.0
+    week_waste_percentage: float = 0.0
 
 @api_router.post("/users", response_model=User)
 async def create_user(user_input: UserCreate, current_user: User = Depends(get_current_user)):
@@ -1407,6 +1439,10 @@ async def get_inventory_summary(current_user: User = Depends(get_current_user)):
     # Get all main categories
     categories = await db.main_categories.find({}, {"_id": 0}).to_list(length=None)
     
+    # Get current date in IST
+    today = get_ist_now().strftime("%Y-%m-%d")
+    week_ago = (get_ist_now() - timedelta(days=7)).strftime("%Y-%m-%d")
+    
     summary = []
     for category in categories:
         # Get all purchases for this category
@@ -1418,12 +1454,39 @@ async def get_inventory_summary(current_user: User = Depends(get_current_user)):
         total_weight = sum(p.get("remaining_weight_kg", 0) for p in purchases)
         total_pieces = sum(p.get("remaining_pieces", 0) for p in purchases if p.get("remaining_pieces") is not None)
         
+        # Get today's waste
+        today_waste = await db.daily_waste_tracking.find(
+            {"main_category_id": category["id"], "tracking_date": today},
+            {"_id": 0}
+        ).to_list(length=None)
+        
+        today_waste_kg = sum(w.get("waste_weight_kg", 0) for w in today_waste)
+        today_raw_kg = sum(w.get("raw_weight_kg", 0) for w in today_waste)
+        today_waste_percentage = (today_waste_kg / today_raw_kg * 100) if today_raw_kg > 0 else 0
+        
+        # Get this week's waste
+        week_waste = await db.daily_waste_tracking.find(
+            {
+                "main_category_id": category["id"],
+                "tracking_date": {"$gte": week_ago, "$lte": today}
+            },
+            {"_id": 0}
+        ).to_list(length=None)
+        
+        week_waste_kg = sum(w.get("waste_weight_kg", 0) for w in week_waste)
+        week_raw_kg = sum(w.get("raw_weight_kg", 0) for w in week_waste)
+        week_waste_percentage = (week_waste_kg / week_raw_kg * 100) if week_raw_kg > 0 else 0
+        
         summary.append(InventorySummary(
             main_category_id=category["id"],
             main_category_name=category["name"],
             total_weight_kg=round(total_weight, 2),
             total_pieces=total_pieces,
-            low_stock=total_weight < 10  # Alert if less than 10kg
+            low_stock=total_weight < 10,  # Alert if less than 10kg
+            today_waste_kg=round(today_waste_kg, 2),
+            today_waste_percentage=round(today_waste_percentage, 2),
+            week_waste_kg=round(week_waste_kg, 2),
+            week_waste_percentage=round(week_waste_percentage, 2)
         ))
     
     return summary
@@ -1454,8 +1517,8 @@ async def create_daily_pieces_tracking(tracking: DailyPiecesTrackingCreate, curr
     if not category:
         raise HTTPException(status_code=404, detail="Main category not found")
     
-    # Determine tracking date
-    tracking_date = tracking.tracking_date if tracking.tracking_date else datetime.now(timezone.utc).strftime("%Y-%m-%d")
+    # Determine tracking date (use IST)
+    tracking_date = tracking.tracking_date if tracking.tracking_date else get_ist_now().strftime("%Y-%m-%d")
     
     # Check if already tracked for this date and category
     existing = await db.daily_pieces_tracking.find_one({
@@ -1500,6 +1563,90 @@ async def create_daily_pieces_tracking(tracking: DailyPiecesTrackingCreate, curr
     
     await db.daily_pieces_tracking.insert_one(new_tracking.dict())
     logger.info(f"Daily pieces tracking created: {category['name']} - {tracking.pieces_sold} pieces on {tracking_date}")
+    return new_tracking
+
+# Daily Waste Tracking
+@api_router.get("/daily-waste-tracking", response_model=List[DailyWasteTracking])
+async def get_daily_waste_tracking(
+    main_category_id: Optional[str] = None,
+    start_date: Optional[str] = None,
+    end_date: Optional[str] = None,
+    current_user: User = Depends(get_current_user)
+):
+    query = {}
+    if main_category_id:
+        query["main_category_id"] = main_category_id
+    if start_date and end_date:
+        query["tracking_date"] = {"$gte": start_date, "$lte": end_date}
+    elif start_date:
+        query["tracking_date"] = {"$gte": start_date}
+    
+    tracking = await db.daily_waste_tracking.find(query, {"_id": 0}).sort("tracking_date", -1).to_list(length=None)
+    return tracking
+
+@api_router.post("/daily-waste-tracking", response_model=DailyWasteTracking)
+async def create_daily_waste_tracking(tracking: DailyWasteTrackingCreate, current_user: User = Depends(get_current_user)):
+    # Get main category
+    category = await db.main_categories.find_one({"id": tracking.main_category_id}, {"_id": 0})
+    if not category:
+        raise HTTPException(status_code=404, detail="Main category not found")
+    
+    # Validate inputs
+    if tracking.raw_weight_kg <= 0:
+        raise HTTPException(status_code=400, detail="Raw weight must be greater than 0")
+    
+    if tracking.dressed_weight_kg <= 0:
+        raise HTTPException(status_code=400, detail="Dressed weight must be greater than 0")
+    
+    if tracking.dressed_weight_kg > tracking.raw_weight_kg:
+        raise HTTPException(status_code=400, detail="Dressed weight cannot be greater than raw weight")
+    
+    # Calculate waste
+    waste_weight_kg = tracking.raw_weight_kg - tracking.dressed_weight_kg
+    waste_percentage = (waste_weight_kg / tracking.raw_weight_kg) * 100
+    
+    # Determine tracking date (use IST)
+    tracking_date = tracking.tracking_date if tracking.tracking_date else get_ist_now().strftime("%Y-%m-%d")
+    
+    # Deduct raw weight from inventory using FIFO
+    purchases = await db.inventory_purchases.find(
+        {"main_category_id": tracking.main_category_id},
+        {"_id": 0}
+    ).sort("purchase_date", 1).to_list(length=None)
+    
+    weight_to_deduct = tracking.raw_weight_kg
+    for purchase in purchases:
+        if weight_to_deduct <= 0:
+            break
+        
+        remaining = purchase.get("remaining_weight_kg", 0)
+        if remaining > 0:
+            deduction = min(remaining, weight_to_deduct)
+            new_remaining = remaining - deduction
+            weight_to_deduct -= deduction
+            
+            await db.inventory_purchases.update_one(
+                {"id": purchase["id"]},
+                {"$set": {"remaining_weight_kg": round(new_remaining, 2)}}
+            )
+    
+    if weight_to_deduct > 0:
+        logger.warning(f"Not enough inventory for {category['name']}. {weight_to_deduct}kg could not be deducted.")
+    
+    # Create waste tracking record
+    new_tracking = DailyWasteTracking(
+        main_category_id=tracking.main_category_id,
+        main_category_name=category["name"],
+        tracking_date=tracking_date,
+        raw_weight_kg=tracking.raw_weight_kg,
+        dressed_weight_kg=tracking.dressed_weight_kg,
+        waste_weight_kg=round(waste_weight_kg, 2),
+        waste_percentage=round(waste_percentage, 2),
+        notes=tracking.notes
+    )
+    
+    await db.daily_waste_tracking.insert_one(new_tracking.dict())
+    logger.info(f"Daily waste tracking created: {category['name']} - Raw: {tracking.raw_weight_kg}kg, Waste: {waste_weight_kg}kg ({waste_percentage:.2f}%) on {tracking_date}")
     return new_tracking
 
 # New POS Sales

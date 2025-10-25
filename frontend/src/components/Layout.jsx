@@ -1,7 +1,7 @@
 import { Outlet, Link, useLocation, useNavigate } from "react-router-dom";
 import { 
   LayoutDashboard, Package, Users, ShoppingCart, TrendingUp, LogOut, Store, 
-  ShoppingBag, FileText, UserCog, List, Box, Warehouse, PieChart 
+  ShoppingBag, FileText, UserCog, List, Box, Warehouse, PieChart, Trash2 
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
@@ -28,7 +28,8 @@ const Layout = ({ setAuth }) => {
     { path: "/main-categories", icon: List, label: "Main Categories", section: "new", adminOnly: true },
     { path: "/derived-products", icon: Box, label: "Derived Products", section: "new", adminOnly: true },
     { path: "/inventory-management", icon: Warehouse, label: "Inventory", section: "new" },
-    { path: "/daily-pieces-tracking", icon: PieChart, label: "Daily Tracking", section: "new" },
+    { path: "/daily-pieces-tracking", icon: PieChart, label: "Daily Pieces", section: "new" },
+    { path: "/daily-waste-tracking", icon: Trash2, label: "Daily Waste", section: "new" },
     { path: "/new-pos", icon: ShoppingCart, label: "New POS", section: "new" },
     // General
     { path: "/sales", icon: TrendingUp, label: "Sales", section: "common" },

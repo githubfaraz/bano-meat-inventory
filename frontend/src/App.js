@@ -17,6 +17,7 @@ import MainCategories from "@/pages/MainCategories";
 import DerivedProducts from "@/pages/DerivedProducts";
 import InventoryManagement from "@/pages/InventoryManagement";
 import DailyPiecesTracking from "@/pages/DailyPiecesTracking";
+import DailyWasteTracking from "@/pages/DailyWasteTracking";
 import NewPOS from "@/pages/NewPOS";
 import Layout from "@/components/Layout";
 import { Toaster } from "@/components/ui/sonner";
@@ -81,6 +82,7 @@ function App() {
             <Route path="derived-products" element={<DerivedProducts />} />
             <Route path="inventory-management" element={<InventoryManagement />} />
             <Route path="daily-pieces-tracking" element={<DailyPiecesTracking />} />
+            <Route path="daily-waste-tracking" element={<DailyWasteTracking />} />
             <Route path="new-pos" element={<NewPOS />} />
           </Route>
         </Routes>
