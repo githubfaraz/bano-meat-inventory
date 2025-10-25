@@ -508,7 +508,7 @@ async def update_product(product_id: str, product_input: ProductCreate, current_
         raise HTTPException(status_code=404, detail="Product not found")
     
     update_data = product_input.model_dump()
-    update_data['updated_at'] = datetime.now(timezone.utc).isoformat()
+    update_data['updated_at'] = get_ist_now().isoformat()
     
     await db.products.update_one({"id": product_id}, {"$set": update_data})
     
