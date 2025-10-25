@@ -42,6 +42,25 @@ ACCESS_TOKEN_EXPIRE_MINUTES = 60 * 24  # 24 hours
 app = FastAPI()
 api_router = APIRouter(prefix="/api")
 
+# Custom JSON response to handle timezone-aware datetimes
+from fastapi.responses import JSONResponse
+from typing import Any
+import json
+
+class CustomJSONResponse(JSONResponse):
+    def render(self, content: Any) -> bytes:
+        return json.dumps(
+            content,
+            ensure_ascii=False,
+            allow_nan=False,
+            indent=None,
+            separators=(",", ":"),
+            default=str  # This will call __str__ on datetime objects, preserving timezone
+        ).encode("utf-8")
+
+app = FastAPI(default_response_class=CustomJSONResponse)
+api_router = APIRouter(prefix="/api")
+
 # ========== MODELS ==========
 
 class UserRegister(BaseModel):
