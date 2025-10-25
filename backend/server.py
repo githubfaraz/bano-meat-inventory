@@ -1517,8 +1517,8 @@ async def create_daily_pieces_tracking(tracking: DailyPiecesTrackingCreate, curr
     if not category:
         raise HTTPException(status_code=404, detail="Main category not found")
     
-    # Determine tracking date
-    tracking_date = tracking.tracking_date if tracking.tracking_date else datetime.now(timezone.utc).strftime("%Y-%m-%d")
+    # Determine tracking date (use IST)
+    tracking_date = tracking.tracking_date if tracking.tracking_date else get_ist_now().strftime("%Y-%m-%d")
     
     # Check if already tracked for this date and category
     existing = await db.daily_pieces_tracking.find_one({
