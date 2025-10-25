@@ -321,7 +321,7 @@ class InventoryPurchase(BaseModel):
     main_category_name: str
     vendor_id: str
     vendor_name: str
-    purchase_date: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    purchase_date: datetime = Field(default_factory=get_ist_now)
     total_weight_kg: float
     total_pieces: Optional[int] = None
     remaining_weight_kg: float
@@ -329,7 +329,7 @@ class InventoryPurchase(BaseModel):
     cost_per_kg: float
     total_cost: float
     notes: Optional[str] = None
-    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    created_at: datetime = Field(default_factory=get_ist_now)
 
 class DailyPiecesTrackingCreate(BaseModel):
     main_category_id: str
