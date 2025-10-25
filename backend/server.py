@@ -233,7 +233,7 @@ async def create_admin_user():
                 "email": "admin@banofresh.com",
                 "full_name": "Bano Fresh Admin",
                 "is_admin": True,
-                "created_at": datetime.now(timezone.utc).isoformat()
+                "created_at": get_ist_now().isoformat()
             }
             admin_user['password'] = hashed_password
             await db.users.insert_one(admin_user)
