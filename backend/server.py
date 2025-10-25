@@ -60,7 +60,7 @@ class User(BaseModel):
     email: str
     full_name: str
     is_admin: bool = False
-    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    created_at: datetime = Field(default_factory=get_ist_now)
 
 class TokenResponse(BaseModel):
     access_token: str
@@ -94,8 +94,8 @@ class Product(BaseModel):
     is_raw_material: bool = False
     purchase_cost: float = 0.0
     derived_from: Optional[str] = None
-    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
-    updated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    created_at: datetime = Field(default_factory=get_ist_now)
+    updated_at: datetime = Field(default_factory=get_ist_now)
 
 class VendorCreate(BaseModel):
     name: str
@@ -112,7 +112,7 @@ class Vendor(BaseModel):
     phone: str
     email: Optional[str] = None
     address: Optional[str] = None
-    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    created_at: datetime = Field(default_factory=get_ist_now)
 
 class CustomerCreate(BaseModel):
     name: str
@@ -128,7 +128,7 @@ class Customer(BaseModel):
     email: Optional[str] = None
     address: Optional[str] = None
     total_purchases: float = 0.0
-    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    created_at: datetime = Field(default_factory=get_ist_now)
 
 class SaleItem(BaseModel):
     product_id: str
@@ -159,7 +159,7 @@ class Sale(BaseModel):
     discount: float
     total: float
     payment_method: str
-    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    created_at: datetime = Field(default_factory=get_ist_now)
     created_by: str
 
 class DashboardStats(BaseModel):
@@ -189,14 +189,14 @@ class Purchase(BaseModel):
     unit: str
     cost_per_unit: float
     total_cost: float
-    purchase_date: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    purchase_date: datetime = Field(default_factory=get_ist_now)
     created_by: str
 
 # ========== AUTHENTICATION ==========
 
 def create_access_token(data: dict):
     to_encode = data.copy()
-    expire = datetime.now(timezone.utc) + timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
+    expire = get_ist_now() + timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
     to_encode.update({"exp": expire})
     encoded_jwt = jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
     return encoded_jwt
@@ -233,7 +233,7 @@ async def create_admin_user():
                 "email": "admin@banofresh.com",
                 "full_name": "Bano Fresh Admin",
                 "is_admin": True,
-                "created_at": datetime.now(timezone.utc).isoformat()
+                "created_at": get_ist_now().isoformat()
             }
             admin_user['password'] = hashed_password
             await db.users.insert_one(admin_user)
@@ -285,8 +285,8 @@ class MainCategory(BaseModel):
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))
     name: str
     description: Optional[str] = None
-    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
-    updated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    created_at: datetime = Field(default_factory=get_ist_now)
+    updated_at: datetime = Field(default_factory=get_ist_now)
 
 class DerivedProductCreate(BaseModel):
     main_category_id: str
@@ -303,8 +303,8 @@ class DerivedProduct(BaseModel):
     sku: str
     selling_price: float
     description: Optional[str] = None
-    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
-    updated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    created_at: datetime = Field(default_factory=get_ist_now)
+    updated_at: datetime = Field(default_factory=get_ist_now)
 
 class InventoryPurchaseCreate(BaseModel):
     main_category_id: str
@@ -321,7 +321,7 @@ class InventoryPurchase(BaseModel):
     main_category_name: str
     vendor_id: str
     vendor_name: str
-    purchase_date: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    purchase_date: datetime = Field(default_factory=get_ist_now)
     total_weight_kg: float
     total_pieces: Optional[int] = None
     remaining_weight_kg: float
@@ -329,7 +329,7 @@ class InventoryPurchase(BaseModel):
     cost_per_kg: float
     total_cost: float
     notes: Optional[str] = None
-    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    created_at: datetime = Field(default_factory=get_ist_now)
 
 class DailyPiecesTrackingCreate(BaseModel):
     main_category_id: str
@@ -395,8 +395,8 @@ class POSSaleNew(BaseModel):
     discount: float
     total: float
     payment_method: str
-    sale_date: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
-    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    sale_date: datetime = Field(default_factory=get_ist_now)
+    created_at: datetime = Field(default_factory=get_ist_now)
 
 class InventorySummary(BaseModel):
     main_category_id: str
@@ -508,7 +508,7 @@ async def update_product(product_id: str, product_input: ProductCreate, current_
         raise HTTPException(status_code=404, detail="Product not found")
     
     update_data = product_input.model_dump()
-    update_data['updated_at'] = datetime.now(timezone.utc).isoformat()
+    update_data['updated_at'] = get_ist_now().isoformat()
     
     await db.products.update_one({"id": product_id}, {"$set": update_data})
     
@@ -672,12 +672,12 @@ async def get_sale(sale_id: str, current_user: User = Depends(get_current_user))
 @api_router.get("/dashboard/stats", response_model=DashboardStats)
 async def get_dashboard_stats(current_user: User = Depends(get_current_user)):
     # Today's sales
-    today_start = datetime.now(timezone.utc).replace(hour=0, minute=0, second=0, microsecond=0)
+    today_start = get_ist_now().replace(hour=0, minute=0, second=0, microsecond=0)
     today_sales = await db.sales.find({}, {"_id": 0}).to_list(10000)
     total_today = sum(s['total'] for s in today_sales if datetime.fromisoformat(s['created_at']) >= today_start)
     
     # Month's sales
-    month_start = datetime.now(timezone.utc).replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+    month_start = get_ist_now().replace(day=1, hour=0, minute=0, second=0, microsecond=0)
     total_month = sum(s['total'] for s in today_sales if datetime.fromisoformat(s['created_at']) >= month_start)
     
     # Low stock items
@@ -1301,7 +1301,7 @@ async def update_main_category(category_id: str, category: MainCategoryCreate, c
         raise HTTPException(status_code=404, detail="Category not found")
     
     update_data = category.dict()
-    update_data["updated_at"] = datetime.now(timezone.utc)
+    update_data["updated_at"] = get_ist_now()
     
     await db.main_categories.update_one({"id": category_id}, {"$set": update_data})
     
@@ -1376,7 +1376,7 @@ async def update_derived_product(product_id: str, product: DerivedProductCreate,
             raise HTTPException(status_code=400, detail="Product with this SKU already exists")
     
     update_data = product.dict()
-    update_data["updated_at"] = datetime.now(timezone.utc)
+    update_data["updated_at"] = get_ist_now()
     
     await db.derived_products.update_one({"id": product_id}, {"$set": update_data})
     
