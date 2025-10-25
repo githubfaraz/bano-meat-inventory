@@ -60,7 +60,7 @@ class User(BaseModel):
     email: str
     full_name: str
     is_admin: bool = False
-    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    created_at: datetime = Field(default_factory=get_ist_now)
 
 class TokenResponse(BaseModel):
     access_token: str
