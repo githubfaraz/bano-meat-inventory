@@ -112,7 +112,7 @@ class Vendor(BaseModel):
     phone: str
     email: Optional[str] = None
     address: Optional[str] = None
-    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    created_at: datetime = Field(default_factory=get_ist_now)
 
 class CustomerCreate(BaseModel):
     name: str
@@ -128,7 +128,7 @@ class Customer(BaseModel):
     email: Optional[str] = None
     address: Optional[str] = None
     total_purchases: float = 0.0
-    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    created_at: datetime = Field(default_factory=get_ist_now)
 
 class SaleItem(BaseModel):
     product_id: str
@@ -159,7 +159,7 @@ class Sale(BaseModel):
     discount: float
     total: float
     payment_method: str
-    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    created_at: datetime = Field(default_factory=get_ist_now)
     created_by: str
 
 class DashboardStats(BaseModel):
