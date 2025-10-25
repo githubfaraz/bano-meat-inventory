@@ -17,6 +17,7 @@ import MainCategories from "@/pages/MainCategories";
 import DerivedProducts from "@/pages/DerivedProducts";
 import InventoryManagement from "@/pages/InventoryManagement";
 import DailyPiecesTracking from "@/pages/DailyPiecesTracking";
+import DailyWasteTracking from "@/pages/DailyWasteTracking";
 import NewPOS from "@/pages/NewPOS";
 import Layout from "@/components/Layout";
 import { Toaster } from "@/components/ui/sonner";
