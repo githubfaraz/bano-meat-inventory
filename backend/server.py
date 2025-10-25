@@ -1534,6 +1534,90 @@ async def create_daily_pieces_tracking(tracking: DailyPiecesTrackingCreate, curr
     logger.info(f"Daily pieces tracking created: {category['name']} - {tracking.pieces_sold} pieces on {tracking_date}")
     return new_tracking
 
+# Daily Waste Tracking
+@api_router.get("/daily-waste-tracking", response_model=List[DailyWasteTracking])
+async def get_daily_waste_tracking(
+    main_category_id: Optional[str] = None,
+    start_date: Optional[str] = None,
+    end_date: Optional[str] = None,
+    current_user: User = Depends(get_current_user)
+):
+    query = {}
+    if main_category_id:
+        query["main_category_id"] = main_category_id
+    if start_date and end_date:
+        query["tracking_date"] = {"$gte": start_date, "$lte": end_date}
+    elif start_date:
+        query["tracking_date"] = {"$gte": start_date}
+    
+    tracking = await db.daily_waste_tracking.find(query, {"_id": 0}).sort("tracking_date", -1).to_list(length=None)
+    return tracking
+
+@api_router.post("/daily-waste-tracking", response_model=DailyWasteTracking)
+async def create_daily_waste_tracking(tracking: DailyWasteTrackingCreate, current_user: User = Depends(get_current_user)):
+    # Get main category
+    category = await db.main_categories.find_one({"id": tracking.main_category_id}, {"_id": 0})
+    if not category:
+        raise HTTPException(status_code=404, detail="Main category not found")
+    
+    # Validate inputs
+    if tracking.raw_weight_kg <= 0:
+        raise HTTPException(status_code=400, detail="Raw weight must be greater than 0")
+    
+    if tracking.dressed_weight_kg <= 0:
+        raise HTTPException(status_code=400, detail="Dressed weight must be greater than 0")
+    
+    if tracking.dressed_weight_kg > tracking.raw_weight_kg:
+        raise HTTPException(status_code=400, detail="Dressed weight cannot be greater than raw weight")
+    
+    # Calculate waste
+    waste_weight_kg = tracking.raw_weight_kg - tracking.dressed_weight_kg
+    waste_percentage = (waste_weight_kg / tracking.raw_weight_kg) * 100
+    
+    # Determine tracking date (use IST)
+    tracking_date = tracking.tracking_date if tracking.tracking_date else get_ist_now().strftime("%Y-%m-%d")
+    
+    # Deduct raw weight from inventory using FIFO
+    purchases = await db.inventory_purchases.find(
+        {"main_category_id": tracking.main_category_id},
+        {"_id": 0}
+    ).sort("purchase_date", 1).to_list(length=None)
+    
+    weight_to_deduct = tracking.raw_weight_kg
+    for purchase in purchases:
+        if weight_to_deduct <= 0:
+            break
+        
+        remaining = purchase.get("remaining_weight_kg", 0)
+        if remaining > 0:
+            deduction = min(remaining, weight_to_deduct)
+            new_remaining = remaining - deduction
+            weight_to_deduct -= deduction
+            
+            await db.inventory_purchases.update_one(
+                {"id": purchase["id"]},
+                {"$set": {"remaining_weight_kg": round(new_remaining, 2)}}
+            )
+    
+    if weight_to_deduct > 0:
+        logger.warning(f"Not enough inventory for {category['name']}. {weight_to_deduct}kg could not be deducted.")
+    
+    # Create waste tracking record
+    new_tracking = DailyWasteTracking(
+        main_category_id=tracking.main_category_id,
+        main_category_name=category["name"],
+        tracking_date=tracking_date,
+        raw_weight_kg=tracking.raw_weight_kg,
+        dressed_weight_kg=tracking.dressed_weight_kg,
+        waste_weight_kg=round(waste_weight_kg, 2),
+        waste_percentage=round(waste_percentage, 2),
+        notes=tracking.notes
+    )
+    
+    await db.daily_waste_tracking.insert_one(new_tracking.dict())
+    logger.info(f"Daily waste tracking created: {category['name']} - Raw: {tracking.raw_weight_kg}kg, Waste: {waste_weight_kg}kg ({waste_percentage:.2f}%) on {tracking_date}")
+    return new_tracking
+
 # New POS Sales
 @api_router.post("/pos-sales", response_model=POSSaleNew)
 async def create_pos_sale(sale: POSSaleCreateNew, current_user: User = Depends(get_current_user)):
