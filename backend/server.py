@@ -350,6 +350,13 @@ class InventoryPurchase(BaseModel):
     total_cost: float
     notes: Optional[str] = None
     created_at: datetime = Field(default_factory=get_ist_now)
+    
+    @field_serializer('purchase_date', 'created_at')
+    def serialize_datetime(self, dt: datetime, _info):
+        """Serialize datetime with timezone info"""
+        if dt.tzinfo is None:
+            dt = IST.localize(dt)
+        return dt.isoformat()
 
 class DailyPiecesTrackingCreate(BaseModel):
     main_category_id: str
