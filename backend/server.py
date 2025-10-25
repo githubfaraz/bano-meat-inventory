@@ -1301,7 +1301,7 @@ async def update_main_category(category_id: str, category: MainCategoryCreate, c
         raise HTTPException(status_code=404, detail="Category not found")
     
     update_data = category.dict()
-    update_data["updated_at"] = datetime.now(timezone.utc)
+    update_data["updated_at"] = get_ist_now()
     
     await db.main_categories.update_one({"id": category_id}, {"$set": update_data})
     
@@ -1376,7 +1376,7 @@ async def update_derived_product(product_id: str, product: DerivedProductCreate,
             raise HTTPException(status_code=400, detail="Product with this SKU already exists")
     
     update_data = product.dict()
-    update_data["updated_at"] = datetime.now(timezone.utc)
+    update_data["updated_at"] = get_ist_now()
     
     await db.derived_products.update_one({"id": product_id}, {"$set": update_data})
     
