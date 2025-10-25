@@ -391,6 +391,13 @@ class DailyWasteTracking(BaseModel):
     waste_percentage: float
     notes: Optional[str] = None
     created_at: datetime = Field(default_factory=get_ist_now)
+    
+    @field_serializer('created_at')
+    def serialize_datetime(self, dt: datetime, _info):
+        """Serialize datetime with timezone info"""
+        if dt.tzinfo is None:
+            dt = IST.localize(dt)
+        return dt.isoformat()
 
 class POSSaleItemNew(BaseModel):
     derived_product_id: str
