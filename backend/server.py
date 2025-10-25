@@ -672,12 +672,12 @@ async def get_sale(sale_id: str, current_user: User = Depends(get_current_user))
 @api_router.get("/dashboard/stats", response_model=DashboardStats)
 async def get_dashboard_stats(current_user: User = Depends(get_current_user)):
     # Today's sales
-    today_start = datetime.now(timezone.utc).replace(hour=0, minute=0, second=0, microsecond=0)
+    today_start = get_ist_now().replace(hour=0, minute=0, second=0, microsecond=0)
     today_sales = await db.sales.find({}, {"_id": 0}).to_list(10000)
     total_today = sum(s['total'] for s in today_sales if datetime.fromisoformat(s['created_at']) >= today_start)
     
     # Month's sales
-    month_start = datetime.now(timezone.utc).replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+    month_start = get_ist_now().replace(day=1, hour=0, minute=0, second=0, microsecond=0)
     total_month = sum(s['total'] for s in today_sales if datetime.fromisoformat(s['created_at']) >= month_start)
     
     # Low stock items
