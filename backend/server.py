@@ -386,7 +386,10 @@ class POSSaleCreateNew(BaseModel):
     payment_method: str
 
 class POSSaleNew(BaseModel):
-    model_config = ConfigDict(extra="ignore")
+    model_config = ConfigDict(
+        extra="ignore",
+        json_encoders={datetime: lambda v: v.isoformat()}
+    )
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))
     customer_id: Optional[str] = None
     customer_name: Optional[str] = None
