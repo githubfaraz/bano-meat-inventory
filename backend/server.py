@@ -343,7 +343,27 @@ class DailyPiecesTracking(BaseModel):
     main_category_name: str
     tracking_date: str  # YYYY-MM-DD format
     pieces_sold: int
-    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    created_at: datetime = Field(default_factory=get_ist_now)
+
+class DailyWasteTrackingCreate(BaseModel):
+    main_category_id: str
+    raw_weight_kg: float
+    dressed_weight_kg: float
+    notes: Optional[str] = None
+    tracking_date: Optional[str] = None  # YYYY-MM-DD format
+
+class DailyWasteTracking(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    main_category_id: str
+    main_category_name: str
+    tracking_date: str  # YYYY-MM-DD format
+    raw_weight_kg: float
+    dressed_weight_kg: float
+    waste_weight_kg: float
+    waste_percentage: float
+    notes: Optional[str] = None
+    created_at: datetime = Field(default_factory=get_ist_now)
 
 class POSSaleItemNew(BaseModel):
     derived_product_id: str
