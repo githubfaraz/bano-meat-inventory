@@ -395,8 +395,8 @@ class POSSaleNew(BaseModel):
     discount: float
     total: float
     payment_method: str
-    sale_date: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
-    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    sale_date: datetime = Field(default_factory=get_ist_now)
+    created_at: datetime = Field(default_factory=get_ist_now)
 
 class InventorySummary(BaseModel):
     main_category_id: str
