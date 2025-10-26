@@ -13,8 +13,7 @@ const DailyWasteTracking = () => {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [formData, setFormData] = useState({
     main_category_id: "",
-    raw_weight_kg: "",
-    dressed_weight_kg: "",
+    waste_kg: "",
     notes: "",
   });
 
