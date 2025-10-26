@@ -378,8 +378,7 @@ class DailyPiecesTracking(BaseModel):
 
 class DailyWasteTrackingCreate(BaseModel):
     main_category_id: str
-    raw_weight_kg: float
-    dressed_weight_kg: float
+    waste_kg: float  # Direct waste amount in kg
     notes: Optional[str] = None
     tracking_date: Optional[str] = None  # YYYY-MM-DD format
 
@@ -389,10 +388,7 @@ class DailyWasteTracking(BaseModel):
     main_category_id: str
     main_category_name: str
     tracking_date: str  # YYYY-MM-DD format
-    raw_weight_kg: float
-    dressed_weight_kg: float
-    waste_weight_kg: float
-    waste_percentage: float
+    waste_kg: float  # Direct waste amount in kg
     notes: Optional[str] = None
     created_at: datetime = Field(default_factory=get_ist_now)
     
