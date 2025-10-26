@@ -326,7 +326,7 @@ const NewPOS = () => {
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium mb-2">
-                    Quantity (kg) *
+                    Quantity *
                   </label>
                   <input
                     type="number"
@@ -334,8 +334,17 @@ const NewPOS = () => {
                     value={quantityKg}
                     onChange={(e) => setQuantityKg(e.target.value)}
                     className="w-full border rounded-lg px-3 py-2"
-                    placeholder="e.g., 2.5"
+                    placeholder={
+                      selectedProduct && derivedProducts.find(p => p.id === selectedProduct)?.sale_unit === "package"
+                        ? "e.g., 3 (packages)"
+                        : "e.g., 2.5 (kg)"
+                    }
                   />
+                  <p className="text-xs text-gray-500 mt-1">
+                    {selectedProduct && derivedProducts.find(p => p.id === selectedProduct)?.sale_unit === "package"
+                      ? "Enter number of packages"
+                      : "Enter weight in kg"}
+                  </p>
                 </div>
                 <div className="flex items-end">
                   <Button
