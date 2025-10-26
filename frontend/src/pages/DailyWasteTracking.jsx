@@ -89,14 +89,6 @@ const DailyWasteTracking = () => {
     setDialogOpen(false);
   };
 
-  const calculateWaste = () => {
-    const raw = parseFloat(formData.raw_weight_kg) || 0;
-    const dressed = parseFloat(formData.dressed_weight_kg) || 0;
-    const waste = raw - dressed;
-    const percentage = raw > 0 ? (waste / raw) * 100 : 0;
-    return { waste: waste.toFixed(2), percentage: percentage.toFixed(2) };
-  };
-
   const getTodayRecords = () => {
     const today = new Date().toISOString().split('T')[0];
     return wasteRecords.filter(record => record.tracking_date === today);
@@ -111,7 +103,6 @@ const DailyWasteTracking = () => {
     return <div className="p-8">Loading waste tracking...</div>;
   }
 
-  const wasteCalc = calculateWaste();
   const todayRecords = getTodayRecords();
   const historicalRecords = getHistoricalRecords();
 
