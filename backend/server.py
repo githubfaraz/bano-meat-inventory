@@ -312,6 +312,8 @@ class DerivedProductCreate(BaseModel):
     main_category_id: str
     name: str
     sku: str
+    sale_unit: str  # "weight" or "package"
+    package_weight_kg: Optional[float] = None  # Required if sale_unit = "package"
     selling_price: float
     description: Optional[str] = None
 
@@ -321,6 +323,8 @@ class DerivedProduct(BaseModel):
     main_category_id: str
     name: str
     sku: str
+    sale_unit: str  # "weight" or "package"
+    package_weight_kg: Optional[float] = None  # Package weight in kg (e.g., 0.5 for 500g)
     selling_price: float
     description: Optional[str] = None
     created_at: datetime = Field(default_factory=get_ist_now)
