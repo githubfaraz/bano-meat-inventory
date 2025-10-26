@@ -74,6 +74,9 @@ const DerivedProducts = () => {
       const data = {
         ...formData,
         selling_price: parseFloat(formData.selling_price),
+        package_weight_kg: formData.sale_unit === "package" && formData.package_weight_kg 
+          ? parseFloat(formData.package_weight_kg) 
+          : null,
       };
 
       if (editingProduct) {
@@ -117,6 +120,8 @@ const DerivedProducts = () => {
       main_category_id: product.main_category_id,
       name: product.name,
       sku: product.sku,
+      sale_unit: product.sale_unit || "weight",
+      package_weight_kg: product.package_weight_kg?.toString() || "",
       selling_price: product.selling_price.toString(),
       description: product.description || "",
     });
