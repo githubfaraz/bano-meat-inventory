@@ -377,8 +377,7 @@ const NewPOS = () => {
                       <div className="flex-1">
                         <p className="font-semibold">{item.derived_product_name}</p>
                         <p className="text-sm text-gray-600">
-                          {item.main_category_name} • {item.quantity_kg}kg × ₹
-                          {item.selling_price}/kg
+                          {item.main_category_name} • {item.quantity_display} × ₹{item.selling_price}{item.sale_unit === "package" ? "/pkg" : "/kg"}
                         </p>
                       </div>
                       <div className="flex items-center gap-4">
