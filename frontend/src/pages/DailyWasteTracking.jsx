@@ -54,21 +54,10 @@ const DailyWasteTracking = () => {
     e.preventDefault();
     
     // Validation
-    const rawWeight = parseFloat(formData.raw_weight_kg);
-    const dressedWeight = parseFloat(formData.dressed_weight_kg);
+    const wasteKg = parseFloat(formData.waste_kg);
     
-    if (rawWeight <= 0) {
-      toast.error("Raw weight must be greater than 0");
-      return;
-    }
-    
-    if (dressedWeight <= 0) {
-      toast.error("Dressed weight must be greater than 0");
-      return;
-    }
-    
-    if (dressedWeight > rawWeight) {
-      toast.error("Dressed weight cannot be greater than raw weight");
+    if (wasteKg <= 0) {
+      toast.error("Waste weight must be greater than 0");
       return;
     }
 
@@ -76,8 +65,7 @@ const DailyWasteTracking = () => {
       const token = localStorage.getItem("token");
       const data = {
         ...formData,
-        raw_weight_kg: rawWeight,
-        dressed_weight_kg: dressedWeight,
+        waste_kg: wasteKg,
       };
 
       await axios.post(`${API_URL}/api/daily-waste-tracking`, data, {
@@ -95,8 +83,7 @@ const DailyWasteTracking = () => {
   const resetForm = () => {
     setFormData({
       main_category_id: "",
-      raw_weight_kg: "",
-      dressed_weight_kg: "",
+      waste_kg: "",
       notes: "",
     });
     setDialogOpen(false);
