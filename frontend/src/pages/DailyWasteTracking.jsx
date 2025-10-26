@@ -294,33 +294,6 @@ const DailyWasteTracking = () => {
             </div>
 
             <div>
-                    </p>
-                    <div className="grid grid-cols-3 gap-3 text-sm">
-                      <div>
-                        <p className="text-gray-600">Raw Weight</p>
-                        <p className="font-semibold text-gray-900">
-                          {formData.raw_weight_kg} kg
-                        </p>
-                      </div>
-                      <div>
-                        <p className="text-gray-600">Dressed Weight</p>
-                        <p className="font-semibold text-emerald-700">
-                          {formData.dressed_weight_kg} kg
-                        </p>
-                      </div>
-                      <div>
-                        <p className="text-gray-600">Waste</p>
-                        <p className="font-semibold text-red-600">
-                          {wasteCalc.waste} kg ({wasteCalc.percentage}%)
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            )}
-
-            <div>
               <label className="block text-sm font-medium mb-2">
                 Notes (Optional)
               </label>
