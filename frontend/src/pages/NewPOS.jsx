@@ -15,7 +15,7 @@ const NewPOS = () => {
   const [quantityKg, setQuantityKg] = useState("");
   const [selectedCustomer, setSelectedCustomer] = useState("walk-in");
   const [discount, setDiscount] = useState(0);
-  const [taxRate, setTaxRate] = useState(5);
+  const [taxRate, setTaxRate] = useState(0);
   const [paymentMethod, setPaymentMethod] = useState("cash");
   const [loading, setLoading] = useState(false);
 
