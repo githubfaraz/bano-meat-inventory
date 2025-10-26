@@ -1394,6 +1394,15 @@ async def create_derived_product(product: DerivedProductCreate, current_user: Us
     if not category:
         raise HTTPException(status_code=404, detail="Main category not found")
     
+    # Validate sale_unit
+    if product.sale_unit not in ["weight", "package"]:
+        raise HTTPException(status_code=400, detail="sale_unit must be 'weight' or 'package'")
+    
+    # Validate package_weight_kg for package unit
+    if product.sale_unit == "package":
+        if not product.package_weight_kg or product.package_weight_kg <= 0:
+            raise HTTPException(status_code=400, detail="package_weight_kg is required and must be > 0 for package unit")
+    
     # Check if SKU already exists
     existing_sku = await db.derived_products.find_one({"sku": product.sku}, {"_id": 0})
     if existing_sku:
@@ -1401,7 +1410,7 @@ async def create_derived_product(product: DerivedProductCreate, current_user: Us
     
     new_product = DerivedProduct(**product.dict())
     await db.derived_products.insert_one(new_product.dict())
-    logger.info(f"Derived product created: {new_product.name} (SKU: {new_product.sku})")
+    logger.info(f"Derived product created: {new_product.name} (SKU: {new_product.sku}, Unit: {new_product.sale_unit})")
     return new_product
 
 @api_router.put("/derived-products/{product_id}", response_model=DerivedProduct)
