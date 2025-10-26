@@ -147,22 +147,14 @@ const DailyWasteTracking = () => {
                           })}
                         </span>
                       </div>
-                      <div className="grid grid-cols-4 gap-4 text-sm">
+                      <div className="grid grid-cols-2 gap-4 text-sm">
                         <div>
-                          <p className="text-gray-600">Raw Weight</p>
-                          <p className="font-semibold text-gray-900">{record.raw_weight_kg} kg</p>
+                          <p className="text-gray-600">Waste Amount</p>
+                          <p className="font-semibold text-red-600">{record.waste_kg} kg</p>
                         </div>
                         <div>
-                          <p className="text-gray-600">Dressed Weight</p>
-                          <p className="font-semibold text-emerald-700">{record.dressed_weight_kg} kg</p>
-                        </div>
-                        <div>
-                          <p className="text-gray-600">Waste</p>
-                          <p className="font-semibold text-red-600">{record.waste_weight_kg} kg</p>
-                        </div>
-                        <div>
-                          <p className="text-gray-600">Waste %</p>
-                          <p className="font-semibold text-red-600">{record.waste_percentage}%</p>
+                          <p className="text-gray-600">Deducted From</p>
+                          <p className="font-semibold text-gray-900">Inventory Stock</p>
                         </div>
                       </div>
                       {record.notes && (
