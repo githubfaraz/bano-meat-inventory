@@ -17,6 +17,8 @@ const DerivedProducts = () => {
     main_category_id: "",
     name: "",
     sku: "",
+    sale_unit: "weight",
+    package_weight_kg: "",
     selling_price: "",
     description: "",
   });
