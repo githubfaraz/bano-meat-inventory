@@ -1642,30 +1642,20 @@ async def create_daily_waste_tracking(tracking: DailyWasteTrackingCreate, curren
     if not category:
         raise HTTPException(status_code=404, detail="Main category not found")
     
-    # Validate inputs
-    if tracking.raw_weight_kg <= 0:
-        raise HTTPException(status_code=400, detail="Raw weight must be greater than 0")
-    
-    if tracking.dressed_weight_kg <= 0:
-        raise HTTPException(status_code=400, detail="Dressed weight must be greater than 0")
-    
-    if tracking.dressed_weight_kg > tracking.raw_weight_kg:
-        raise HTTPException(status_code=400, detail="Dressed weight cannot be greater than raw weight")
-    
-    # Calculate waste
-    waste_weight_kg = tracking.raw_weight_kg - tracking.dressed_weight_kg
-    waste_percentage = (waste_weight_kg / tracking.raw_weight_kg) * 100
+    # Validate waste amount
+    if tracking.waste_kg <= 0:
+        raise HTTPException(status_code=400, detail="Waste weight must be greater than 0")
     
     # Determine tracking date (use IST)
     tracking_date = tracking.tracking_date if tracking.tracking_date else get_ist_now().strftime("%Y-%m-%d")
     
-    # Deduct raw weight from inventory using FIFO
+    # Deduct waste weight from inventory using FIFO
     purchases = await db.inventory_purchases.find(
         {"main_category_id": tracking.main_category_id},
         {"_id": 0}
     ).sort("purchase_date", 1).to_list(length=None)
     
-    weight_to_deduct = tracking.raw_weight_kg
+    weight_to_deduct = tracking.waste_kg
     for purchase in purchases:
         if weight_to_deduct <= 0:
             break
@@ -1689,15 +1679,12 @@ async def create_daily_waste_tracking(tracking: DailyWasteTrackingCreate, curren
         main_category_id=tracking.main_category_id,
         main_category_name=category["name"],
         tracking_date=tracking_date,
-        raw_weight_kg=tracking.raw_weight_kg,
-        dressed_weight_kg=tracking.dressed_weight_kg,
-        waste_weight_kg=round(waste_weight_kg, 2),
-        waste_percentage=round(waste_percentage, 2),
+        waste_kg=round(tracking.waste_kg, 2),
         notes=tracking.notes
     )
     
     await db.daily_waste_tracking.insert_one(new_tracking.dict())
-    logger.info(f"Daily waste tracking created: {category['name']} - Raw: {tracking.raw_weight_kg}kg, Waste: {waste_weight_kg}kg ({waste_percentage:.2f}%) on {tracking_date}")
+    logger.info(f"Daily waste tracking created: {category['name']} - Waste: {tracking.waste_kg}kg on {tracking_date}")
     return new_tracking
 
 # New POS Sales
