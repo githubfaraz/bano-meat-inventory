@@ -13,8 +13,7 @@ const DailyWasteTracking = () => {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [formData, setFormData] = useState({
     main_category_id: "",
-    raw_weight_kg: "",
-    dressed_weight_kg: "",
+    waste_kg: "",
     notes: "",
   });
 
@@ -55,21 +54,10 @@ const DailyWasteTracking = () => {
     e.preventDefault();
     
     // Validation
-    const rawWeight = parseFloat(formData.raw_weight_kg);
-    const dressedWeight = parseFloat(formData.dressed_weight_kg);
+    const wasteKg = parseFloat(formData.waste_kg);
     
-    if (rawWeight <= 0) {
-      toast.error("Raw weight must be greater than 0");
-      return;
-    }
-    
-    if (dressedWeight <= 0) {
-      toast.error("Dressed weight must be greater than 0");
-      return;
-    }
-    
-    if (dressedWeight > rawWeight) {
-      toast.error("Dressed weight cannot be greater than raw weight");
+    if (wasteKg <= 0) {
+      toast.error("Waste weight must be greater than 0");
       return;
     }
 
@@ -77,8 +65,7 @@ const DailyWasteTracking = () => {
       const token = localStorage.getItem("token");
       const data = {
         ...formData,
-        raw_weight_kg: rawWeight,
-        dressed_weight_kg: dressedWeight,
+        waste_kg: wasteKg,
       };
 
       await axios.post(`${API_URL}/api/daily-waste-tracking`, data, {
@@ -96,19 +83,10 @@ const DailyWasteTracking = () => {
   const resetForm = () => {
     setFormData({
       main_category_id: "",
-      raw_weight_kg: "",
-      dressed_weight_kg: "",
+      waste_kg: "",
       notes: "",
     });
     setDialogOpen(false);
-  };
-
-  const calculateWaste = () => {
-    const raw = parseFloat(formData.raw_weight_kg) || 0;
-    const dressed = parseFloat(formData.dressed_weight_kg) || 0;
-    const waste = raw - dressed;
-    const percentage = raw > 0 ? (waste / raw) * 100 : 0;
-    return { waste: waste.toFixed(2), percentage: percentage.toFixed(2) };
   };
 
   const getTodayRecords = () => {
@@ -125,7 +103,6 @@ const DailyWasteTracking = () => {
     return <div className="p-8">Loading waste tracking...</div>;
   }
 
-  const wasteCalc = calculateWaste();
   const todayRecords = getTodayRecords();
   const historicalRecords = getHistoricalRecords();
 
@@ -170,22 +147,14 @@ const DailyWasteTracking = () => {
                           })}
                         </span>
                       </div>
-                      <div className="grid grid-cols-4 gap-4 text-sm">
+                      <div className="grid grid-cols-2 gap-4 text-sm">
                         <div>
-                          <p className="text-gray-600">Raw Weight</p>
-                          <p className="font-semibold text-gray-900">{record.raw_weight_kg} kg</p>
+                          <p className="text-gray-600">Waste Amount</p>
+                          <p className="font-semibold text-red-600">{record.waste_kg} kg</p>
                         </div>
                         <div>
-                          <p className="text-gray-600">Dressed Weight</p>
-                          <p className="font-semibold text-emerald-700">{record.dressed_weight_kg} kg</p>
-                        </div>
-                        <div>
-                          <p className="text-gray-600">Waste</p>
-                          <p className="font-semibold text-red-600">{record.waste_weight_kg} kg</p>
-                        </div>
-                        <div>
-                          <p className="text-gray-600">Waste %</p>
-                          <p className="font-semibold text-red-600">{record.waste_percentage}%</p>
+                          <p className="text-gray-600">Deducted From</p>
+                          <p className="font-semibold text-gray-900">Inventory Stock</p>
                         </div>
                       </div>
                       {record.notes && (
@@ -238,22 +207,14 @@ const DailyWasteTracking = () => {
                           })}
                         </span>
                       </div>
-                      <div className="grid grid-cols-4 gap-4 text-sm">
+                      <div className="grid grid-cols-2 gap-4 text-sm">
                         <div>
-                          <p className="text-gray-600">Raw Weight</p>
-                          <p className="font-semibold text-gray-900">{record.raw_weight_kg} kg</p>
+                          <p className="text-gray-600">Waste Amount</p>
+                          <p className="font-semibold text-red-600">{record.waste_kg} kg</p>
                         </div>
                         <div>
-                          <p className="text-gray-600">Dressed Weight</p>
-                          <p className="font-semibold text-emerald-600">{record.dressed_weight_kg} kg</p>
-                        </div>
-                        <div>
-                          <p className="text-gray-600">Waste</p>
-                          <p className="font-semibold text-red-600">{record.waste_weight_kg} kg</p>
-                        </div>
-                        <div>
-                          <p className="text-gray-600">Waste %</p>
-                          <p className="font-semibold text-red-600">{record.waste_percentage}%</p>
+                          <p className="text-gray-600">Deducted From</p>
+                          <p className="font-semibold text-gray-900">Inventory Stock</p>
                         </div>
                       </div>
                       {record.notes && (
@@ -298,80 +259,39 @@ const DailyWasteTracking = () => {
               </select>
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-medium mb-2">
-                  Raw Weight Processed (kg) *
-                </label>
-                <input
-                  type="number"
-                  step="0.01"
-                  required
-                  value={formData.raw_weight_kg}
-                  onChange={(e) =>
-                    setFormData({ ...formData, raw_weight_kg: e.target.value })
-                  }
-                  className="w-full border rounded-lg px-3 py-2"
-                  placeholder="e.g., 50.00"
-                />
-                <p className="text-xs text-gray-500 mt-1">
-                  How much raw meat was used today
-                </p>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium mb-2">
-                  Dressed/Sellable Weight (kg) *
-                </label>
-                <input
-                  type="number"
-                  step="0.01"
-                  required
-                  value={formData.dressed_weight_kg}
-                  onChange={(e) =>
-                    setFormData({ ...formData, dressed_weight_kg: e.target.value })
-                  }
-                  className="w-full border rounded-lg px-3 py-2"
-                  placeholder="e.g., 35.00"
-                />
-                <p className="text-xs text-gray-500 mt-1">
-                  How much sellable product obtained
-                </p>
-              </div>
+            <div>
+              <label className="block text-sm font-medium mb-2">
+                Waste Amount (kg) *
+              </label>
+              <input
+                type="number"
+                step="0.01"
+                required
+                value={formData.waste_kg}
+                onChange={(e) =>
+                  setFormData({ ...formData, waste_kg: e.target.value })
+                }
+                className="w-full border rounded-lg px-3 py-2"
+                placeholder="e.g., 15.00"
+              />
+              <p className="text-xs text-gray-500 mt-1">
+                Total waste in kg to be deducted from inventory
+              </p>
             </div>
 
-            {formData.raw_weight_kg && formData.dressed_weight_kg && (
-              <div className="bg-amber-50 border border-amber-200 p-4 rounded-lg">
-                <div className="flex items-start gap-2">
-                  <AlertCircle className="h-5 w-5 text-amber-600 mt-0.5" />
-                  <div className="flex-1">
-                    <p className="font-semibold text-amber-900 mb-2">
-                      📊 Automatic Calculation
-                    </p>
-                    <div className="grid grid-cols-3 gap-3 text-sm">
-                      <div>
-                        <p className="text-gray-600">Raw Weight</p>
-                        <p className="font-semibold text-gray-900">
-                          {formData.raw_weight_kg} kg
-                        </p>
-                      </div>
-                      <div>
-                        <p className="text-gray-600">Dressed Weight</p>
-                        <p className="font-semibold text-emerald-700">
-                          {formData.dressed_weight_kg} kg
-                        </p>
-                      </div>
-                      <div>
-                        <p className="text-gray-600">Waste</p>
-                        <p className="font-semibold text-red-600">
-                          {wasteCalc.waste} kg ({wasteCalc.percentage}%)
-                        </p>
-                      </div>
-                    </div>
-                  </div>
+            <div className="bg-blue-50 border border-blue-200 p-4 rounded-lg">
+              <div className="flex items-start gap-2">
+                <AlertCircle className="h-5 w-5 text-blue-600 mt-0.5" />
+                <div className="flex-1">
+                  <p className="font-semibold text-blue-900 mb-1">
+                    ℹ️ Note
+                  </p>
+                  <p className="text-sm text-blue-800">
+                    This waste amount will be directly deducted from your inventory stock using FIFO (First In, First Out) method.
+                  </p>
                 </div>
               </div>
-            )}
+            </div>
 
             <div>
               <label className="block text-sm font-medium mb-2">

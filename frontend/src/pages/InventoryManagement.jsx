@@ -324,29 +324,17 @@ const InventoryManagement = () => {
                   <CardContent className="pt-6">
                     <div className="flex justify-between items-start">
                       <div className="flex-1">
-                        <div className="grid grid-cols-4 gap-4">
+                        <div className="grid grid-cols-2 gap-4">
                           <div>
-                            <p className="text-xs text-gray-500">Raw Weight</p>
+                            <p className="text-xs text-gray-500">Waste Amount</p>
+                            <p className="text-lg font-semibold text-red-600">
+                              {waste.waste_kg} kg
+                            </p>
+                          </div>
+                          <div>
+                            <p className="text-xs text-gray-500">Deducted From</p>
                             <p className="text-lg font-semibold text-gray-900">
-                              {waste.raw_weight_kg} kg
-                            </p>
-                          </div>
-                          <div>
-                            <p className="text-xs text-gray-500">Dressed Weight</p>
-                            <p className="text-lg font-semibold text-emerald-600">
-                              {waste.dressed_weight_kg} kg
-                            </p>
-                          </div>
-                          <div>
-                            <p className="text-xs text-gray-500">Waste</p>
-                            <p className="text-lg font-semibold text-red-600">
-                              {waste.waste_weight_kg} kg
-                            </p>
-                          </div>
-                          <div>
-                            <p className="text-xs text-gray-500">Waste %</p>
-                            <p className="text-lg font-semibold text-red-600">
-                              {waste.waste_percentage}%
+                              Inventory Stock
                             </p>
                           </div>
                         </div>

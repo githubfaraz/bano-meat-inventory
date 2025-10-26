@@ -17,6 +17,8 @@ const DerivedProducts = () => {
     main_category_id: "",
     name: "",
     sku: "",
+    sale_unit: "weight",
+    package_weight_kg: "",
     selling_price: "",
     description: "",
   });
@@ -72,6 +74,9 @@ const DerivedProducts = () => {
       const data = {
         ...formData,
         selling_price: parseFloat(formData.selling_price),
+        package_weight_kg: formData.sale_unit === "package" && formData.package_weight_kg 
+          ? parseFloat(formData.package_weight_kg) 
+          : null,
       };
 
       if (editingProduct) {
@@ -115,6 +120,8 @@ const DerivedProducts = () => {
       main_category_id: product.main_category_id,
       name: product.name,
       sku: product.sku,
+      sale_unit: product.sale_unit || "weight",
+      package_weight_kg: product.package_weight_kg?.toString() || "",
       selling_price: product.selling_price.toString(),
       description: product.description || "",
     });
@@ -126,6 +133,8 @@ const DerivedProducts = () => {
       main_category_id: "",
       name: "",
       sku: "",
+      sale_unit: "weight",
+      package_weight_kg: "",
       selling_price: "",
       description: "",
     });
@@ -205,9 +214,15 @@ const DerivedProducts = () => {
                   <span className="text-sm font-medium">{product.sku}</span>
                 </div>
                 <div className="flex items-center justify-between">
+                  <span className="text-sm text-gray-600">Unit:</span>
+                  <span className="text-sm font-medium">
+                    {product.sale_unit === "weight" ? "Weight (kg)" : `Package (${product.package_weight_kg}kg)`}
+                  </span>
+                </div>
+                <div className="flex items-center justify-between">
                   <span className="text-sm text-gray-600">Price:</span>
                   <span className="text-lg font-bold text-emerald-600">
-                    ₹{product.selling_price}/kg
+                    ₹{product.selling_price}{product.sale_unit === "weight" ? "/kg" : "/pkg"}
                   </span>
                 </div>
                 {product.description && (
@@ -287,8 +302,48 @@ const DerivedProducts = () => {
             </div>
 
             <div>
+              <label className="block text-sm font-medium mb-2">Sale Unit *</label>
+              <select
+                required
+                value={formData.sale_unit}
+                onChange={(e) => setFormData({ ...formData, sale_unit: e.target.value })}
+                className="w-full border rounded-lg px-3 py-2"
+              >
+                <option value="weight">Weight (kg) - Sold by exact weight</option>
+                <option value="package">Package - Sold by fixed package</option>
+              </select>
+              <p className="text-xs text-gray-500 mt-1">
+                {formData.sale_unit === "weight" 
+                  ? "For fresh items sold by weight (e.g., Boneless Chicken)"
+                  : "For pre-packaged items (e.g., Frozen Nuggets 500g)"}
+              </p>
+            </div>
+
+            {formData.sale_unit === "package" && (
+              <div>
+                <label className="block text-sm font-medium mb-2">
+                  Package Weight (kg) *
+                </label>
+                <input
+                  type="number"
+                  step="0.001"
+                  required
+                  value={formData.package_weight_kg}
+                  onChange={(e) =>
+                    setFormData({ ...formData, package_weight_kg: e.target.value })
+                  }
+                  className="w-full border rounded-lg px-3 py-2"
+                  placeholder="e.g., 0.5 for 500g, 0.1 for 100g"
+                />
+                <p className="text-xs text-gray-500 mt-1">
+                  Weight of one package in kg (e.g., 0.5 = 500g, 0.25 = 250g)
+                </p>
+              </div>
+            )}
+
+            <div>
               <label className="block text-sm font-medium mb-2">
-                Selling Price (₹/kg) *
+                Selling Price (₹) *
               </label>
               <input
                 type="number"
@@ -299,8 +354,11 @@ const DerivedProducts = () => {
                   setFormData({ ...formData, selling_price: e.target.value })
                 }
                 className="w-full border rounded-lg px-3 py-2"
-                placeholder="e.g., 350.00"
+                placeholder={formData.sale_unit === "weight" ? "e.g., 350 per kg" : "e.g., 250 per package"}
               />
+              <p className="text-xs text-gray-500 mt-1">
+                {formData.sale_unit === "weight" ? "Price per kg" : "Price per package"}
+              </p>
             </div>
 
             <div>

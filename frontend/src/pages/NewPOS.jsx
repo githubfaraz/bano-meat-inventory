@@ -15,7 +15,7 @@ const NewPOS = () => {
   const [quantityKg, setQuantityKg] = useState("");
   const [selectedCustomer, setSelectedCustomer] = useState("walk-in");
   const [discount, setDiscount] = useState(0);
-  const [taxRate, setTaxRate] = useState(5);
+  const [taxRate, setTaxRate] = useState(0);
   const [paymentMethod, setPaymentMethod] = useState("cash");
   const [loading, setLoading] = useState(false);
 
@@ -83,6 +83,13 @@ const NewPOS = () => {
     if (!product || !category) return;
 
     const qty = parseFloat(quantityKg);
+    let quantityInKg = qty;
+    
+    // If product is sold by package, convert packages to kg
+    if (product.sale_unit === "package") {
+      quantityInKg = qty * product.package_weight_kg;
+    }
+    
     const total = qty * product.selling_price;
 
     const cartItem = {
@@ -90,8 +97,10 @@ const NewPOS = () => {
       derived_product_name: product.name,
       main_category_id: category.id,
       main_category_name: category.name,
-      quantity_kg: qty,
+      quantity_kg: quantityInKg,  // Always store in kg for inventory deduction
+      quantity_display: product.sale_unit === "package" ? `${qty} pkg` : `${qty} kg`,
       selling_price: product.selling_price,
+      sale_unit: product.sale_unit,
       total: total,
     };
 
@@ -317,7 +326,7 @@ const NewPOS = () => {
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium mb-2">
-                    Quantity (kg) *
+                    Quantity *
                   </label>
                   <input
                     type="number"
@@ -325,8 +334,17 @@ const NewPOS = () => {
                     value={quantityKg}
                     onChange={(e) => setQuantityKg(e.target.value)}
                     className="w-full border rounded-lg px-3 py-2"
-                    placeholder="e.g., 2.5"
+                    placeholder={
+                      selectedProduct && derivedProducts.find(p => p.id === selectedProduct)?.sale_unit === "package"
+                        ? "e.g., 3 (packages)"
+                        : "e.g., 2.5 (kg)"
+                    }
                   />
+                  <p className="text-xs text-gray-500 mt-1">
+                    {selectedProduct && derivedProducts.find(p => p.id === selectedProduct)?.sale_unit === "package"
+                      ? "Enter number of packages"
+                      : "Enter weight in kg"}
+                  </p>
                 </div>
                 <div className="flex items-end">
                   <Button
@@ -359,8 +377,7 @@ const NewPOS = () => {
                       <div className="flex-1">
                         <p className="font-semibold">{item.derived_product_name}</p>
                         <p className="text-sm text-gray-600">
-                          {item.main_category_name} • {item.quantity_kg}kg × ₹
-                          {item.selling_price}/kg
+                          {item.main_category_name} • {item.quantity_display} × ₹{item.selling_price}{item.sale_unit === "package" ? "/pkg" : "/kg"}
                         </p>
                       </div>
                       <div className="flex items-center gap-4">

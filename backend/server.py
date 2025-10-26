@@ -1,12 +1,13 @@
 from fastapi import FastAPI, APIRouter, HTTPException, Depends, status
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
+from fastapi.encoders import jsonable_encoder
 from dotenv import load_dotenv
 from starlette.middleware.cors import CORSMiddleware
 from motor.motor_asyncio import AsyncIOMotorClient
 import os
 import logging
 from pathlib import Path
-from pydantic import BaseModel, Field, ConfigDict, EmailStr
+from pydantic import BaseModel, Field, ConfigDict, EmailStr, field_serializer
 from typing import List, Optional
 import uuid
 from datetime import datetime, timezone, timedelta
@@ -39,6 +40,25 @@ ACCESS_TOKEN_EXPIRE_MINUTES = 60 * 24  # 24 hours
 
 # Create the main app
 app = FastAPI()
+api_router = APIRouter(prefix="/api")
+
+# Custom JSON response to handle timezone-aware datetimes
+from fastapi.responses import JSONResponse
+from typing import Any
+import json
+
+class CustomJSONResponse(JSONResponse):
+    def render(self, content: Any) -> bytes:
+        return json.dumps(
+            content,
+            ensure_ascii=False,
+            allow_nan=False,
+            indent=None,
+            separators=(",", ":"),
+            default=str  # This will call __str__ on datetime objects, preserving timezone
+        ).encode("utf-8")
+
+app = FastAPI(default_response_class=CustomJSONResponse)
 api_router = APIRouter(prefix="/api")
 
 # ========== MODELS ==========
@@ -292,6 +312,8 @@ class DerivedProductCreate(BaseModel):
     main_category_id: str
     name: str
     sku: str
+    sale_unit: str  # "weight" or "package"
+    package_weight_kg: Optional[float] = None  # Required if sale_unit = "package"
     selling_price: float
     description: Optional[str] = None
 
@@ -301,6 +323,8 @@ class DerivedProduct(BaseModel):
     main_category_id: str
     name: str
     sku: str
+    sale_unit: str  # "weight" or "package"
+    package_weight_kg: Optional[float] = None  # Package weight in kg (e.g., 0.5 for 500g)
     selling_price: float
     description: Optional[str] = None
     created_at: datetime = Field(default_factory=get_ist_now)
@@ -330,6 +354,13 @@ class InventoryPurchase(BaseModel):
     total_cost: float
     notes: Optional[str] = None
     created_at: datetime = Field(default_factory=get_ist_now)
+    
+    @field_serializer('purchase_date', 'created_at')
+    def serialize_datetime(self, dt: datetime, _info):
+        """Serialize datetime with timezone info"""
+        if dt.tzinfo is None:
+            dt = IST.localize(dt)
+        return dt.isoformat()
 
 class DailyPiecesTrackingCreate(BaseModel):
     main_category_id: str
@@ -347,8 +378,7 @@ class DailyPiecesTracking(BaseModel):
 
 class DailyWasteTrackingCreate(BaseModel):
     main_category_id: str
-    raw_weight_kg: float
-    dressed_weight_kg: float
+    waste_kg: float  # Direct waste amount in kg
     notes: Optional[str] = None
     tracking_date: Optional[str] = None  # YYYY-MM-DD format
 
@@ -358,12 +388,16 @@ class DailyWasteTracking(BaseModel):
     main_category_id: str
     main_category_name: str
     tracking_date: str  # YYYY-MM-DD format
-    raw_weight_kg: float
-    dressed_weight_kg: float
-    waste_weight_kg: float
-    waste_percentage: float
+    waste_kg: float  # Direct waste amount in kg
     notes: Optional[str] = None
     created_at: datetime = Field(default_factory=get_ist_now)
+    
+    @field_serializer('created_at')
+    def serialize_datetime(self, dt: datetime, _info):
+        """Serialize datetime with timezone info"""
+        if dt.tzinfo is None:
+            dt = IST.localize(dt)
+        return dt.isoformat()
 
 class POSSaleItemNew(BaseModel):
     derived_product_id: str
@@ -397,6 +431,14 @@ class POSSaleNew(BaseModel):
     payment_method: str
     sale_date: datetime = Field(default_factory=get_ist_now)
     created_at: datetime = Field(default_factory=get_ist_now)
+    
+    @field_serializer('sale_date', 'created_at')
+    def serialize_datetime(self, dt: datetime, _info):
+        """Serialize datetime with timezone info"""
+        if dt.tzinfo is None:
+            # If no timezone, assume IST
+            dt = IST.localize(dt)
+        return dt.isoformat()
 
 class InventorySummary(BaseModel):
     main_category_id: str
@@ -1348,6 +1390,15 @@ async def create_derived_product(product: DerivedProductCreate, current_user: Us
     if not category:
         raise HTTPException(status_code=404, detail="Main category not found")
     
+    # Validate sale_unit
+    if product.sale_unit not in ["weight", "package"]:
+        raise HTTPException(status_code=400, detail="sale_unit must be 'weight' or 'package'")
+    
+    # Validate package_weight_kg for package unit
+    if product.sale_unit == "package":
+        if not product.package_weight_kg or product.package_weight_kg <= 0:
+            raise HTTPException(status_code=400, detail="package_weight_kg is required and must be > 0 for package unit")
+    
     # Check if SKU already exists
     existing_sku = await db.derived_products.find_one({"sku": product.sku}, {"_id": 0})
     if existing_sku:
@@ -1355,7 +1406,7 @@ async def create_derived_product(product: DerivedProductCreate, current_user: Us
     
     new_product = DerivedProduct(**product.dict())
     await db.derived_products.insert_one(new_product.dict())
-    logger.info(f"Derived product created: {new_product.name} (SKU: {new_product.sku})")
+    logger.info(f"Derived product created: {new_product.name} (SKU: {new_product.sku}, Unit: {new_product.sale_unit})")
     return new_product
 
 @api_router.put("/derived-products/{product_id}", response_model=DerivedProduct)
@@ -1454,15 +1505,13 @@ async def get_inventory_summary(current_user: User = Depends(get_current_user)):
         total_weight = sum(p.get("remaining_weight_kg", 0) for p in purchases)
         total_pieces = sum(p.get("remaining_pieces", 0) for p in purchases if p.get("remaining_pieces") is not None)
         
-        # Get today's waste
+        # Get today's waste (simplified - just waste_kg)
         today_waste = await db.daily_waste_tracking.find(
             {"main_category_id": category["id"], "tracking_date": today},
             {"_id": 0}
         ).to_list(length=None)
         
-        today_waste_kg = sum(w.get("waste_weight_kg", 0) for w in today_waste)
-        today_raw_kg = sum(w.get("raw_weight_kg", 0) for w in today_waste)
-        today_waste_percentage = (today_waste_kg / today_raw_kg * 100) if today_raw_kg > 0 else 0
+        today_waste_kg = sum(w.get("waste_kg", 0) for w in today_waste)
         
         # Get this week's waste
         week_waste = await db.daily_waste_tracking.find(
@@ -1473,9 +1522,7 @@ async def get_inventory_summary(current_user: User = Depends(get_current_user)):
             {"_id": 0}
         ).to_list(length=None)
         
-        week_waste_kg = sum(w.get("waste_weight_kg", 0) for w in week_waste)
-        week_raw_kg = sum(w.get("raw_weight_kg", 0) for w in week_waste)
-        week_waste_percentage = (week_waste_kg / week_raw_kg * 100) if week_raw_kg > 0 else 0
+        week_waste_kg = sum(w.get("waste_kg", 0) for w in week_waste)
         
         summary.append(InventorySummary(
             main_category_id=category["id"],
@@ -1484,9 +1531,9 @@ async def get_inventory_summary(current_user: User = Depends(get_current_user)):
             total_pieces=total_pieces,
             low_stock=total_weight < 10,  # Alert if less than 10kg
             today_waste_kg=round(today_waste_kg, 2),
-            today_waste_percentage=round(today_waste_percentage, 2),
+            today_waste_percentage=0,  # Removed percentage calculation
             week_waste_kg=round(week_waste_kg, 2),
-            week_waste_percentage=round(week_waste_percentage, 2)
+            week_waste_percentage=0  # Removed percentage calculation
         ))
     
     return summary
@@ -1591,30 +1638,20 @@ async def create_daily_waste_tracking(tracking: DailyWasteTrackingCreate, curren
     if not category:
         raise HTTPException(status_code=404, detail="Main category not found")
     
-    # Validate inputs
-    if tracking.raw_weight_kg <= 0:
-        raise HTTPException(status_code=400, detail="Raw weight must be greater than 0")
-    
-    if tracking.dressed_weight_kg <= 0:
-        raise HTTPException(status_code=400, detail="Dressed weight must be greater than 0")
-    
-    if tracking.dressed_weight_kg > tracking.raw_weight_kg:
-        raise HTTPException(status_code=400, detail="Dressed weight cannot be greater than raw weight")
-    
-    # Calculate waste
-    waste_weight_kg = tracking.raw_weight_kg - tracking.dressed_weight_kg
-    waste_percentage = (waste_weight_kg / tracking.raw_weight_kg) * 100
+    # Validate waste amount
+    if tracking.waste_kg <= 0:
+        raise HTTPException(status_code=400, detail="Waste weight must be greater than 0")
     
     # Determine tracking date (use IST)
     tracking_date = tracking.tracking_date if tracking.tracking_date else get_ist_now().strftime("%Y-%m-%d")
     
-    # Deduct raw weight from inventory using FIFO
+    # Deduct waste weight from inventory using FIFO
     purchases = await db.inventory_purchases.find(
         {"main_category_id": tracking.main_category_id},
         {"_id": 0}
     ).sort("purchase_date", 1).to_list(length=None)
     
-    weight_to_deduct = tracking.raw_weight_kg
+    weight_to_deduct = tracking.waste_kg
     for purchase in purchases:
         if weight_to_deduct <= 0:
             break
@@ -1638,15 +1675,12 @@ async def create_daily_waste_tracking(tracking: DailyWasteTrackingCreate, curren
         main_category_id=tracking.main_category_id,
         main_category_name=category["name"],
         tracking_date=tracking_date,
-        raw_weight_kg=tracking.raw_weight_kg,
-        dressed_weight_kg=tracking.dressed_weight_kg,
-        waste_weight_kg=round(waste_weight_kg, 2),
-        waste_percentage=round(waste_percentage, 2),
+        waste_kg=round(tracking.waste_kg, 2),
         notes=tracking.notes
     )
     
     await db.daily_waste_tracking.insert_one(new_tracking.dict())
-    logger.info(f"Daily waste tracking created: {category['name']} - Raw: {tracking.raw_weight_kg}kg, Waste: {waste_weight_kg}kg ({waste_percentage:.2f}%) on {tracking_date}")
+    logger.info(f"Daily waste tracking created: {category['name']} - Waste: {tracking.waste_kg}kg on {tracking_date}")
     return new_tracking
 
 # New POS Sales
