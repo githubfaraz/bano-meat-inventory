@@ -214,9 +214,15 @@ const DerivedProducts = () => {
                   <span className="text-sm font-medium">{product.sku}</span>
                 </div>
                 <div className="flex items-center justify-between">
+                  <span className="text-sm text-gray-600">Unit:</span>
+                  <span className="text-sm font-medium">
+                    {product.sale_unit === "weight" ? "Weight (kg)" : `Package (${product.package_weight_kg}kg)`}
+                  </span>
+                </div>
+                <div className="flex items-center justify-between">
                   <span className="text-sm text-gray-600">Price:</span>
                   <span className="text-lg font-bold text-emerald-600">
-                    ₹{product.selling_price}/kg
+                    ₹{product.selling_price}{product.sale_unit === "weight" ? "/kg" : "/pkg"}
                   </span>
                 </div>
                 {product.description && (
