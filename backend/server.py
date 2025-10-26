@@ -1505,15 +1505,13 @@ async def get_inventory_summary(current_user: User = Depends(get_current_user)):
         total_weight = sum(p.get("remaining_weight_kg", 0) for p in purchases)
         total_pieces = sum(p.get("remaining_pieces", 0) for p in purchases if p.get("remaining_pieces") is not None)
         
-        # Get today's waste
+        # Get today's waste (simplified - just waste_kg)
         today_waste = await db.daily_waste_tracking.find(
             {"main_category_id": category["id"], "tracking_date": today},
             {"_id": 0}
         ).to_list(length=None)
         
-        today_waste_kg = sum(w.get("waste_weight_kg", 0) for w in today_waste)
-        today_raw_kg = sum(w.get("raw_weight_kg", 0) for w in today_waste)
-        today_waste_percentage = (today_waste_kg / today_raw_kg * 100) if today_raw_kg > 0 else 0
+        today_waste_kg = sum(w.get("waste_kg", 0) for w in today_waste)
         
         # Get this week's waste
         week_waste = await db.daily_waste_tracking.find(
@@ -1524,9 +1522,7 @@ async def get_inventory_summary(current_user: User = Depends(get_current_user)):
             {"_id": 0}
         ).to_list(length=None)
         
-        week_waste_kg = sum(w.get("waste_weight_kg", 0) for w in week_waste)
-        week_raw_kg = sum(w.get("raw_weight_kg", 0) for w in week_waste)
-        week_waste_percentage = (week_waste_kg / week_raw_kg * 100) if week_raw_kg > 0 else 0
+        week_waste_kg = sum(w.get("waste_kg", 0) for w in week_waste)
         
         summary.append(InventorySummary(
             main_category_id=category["id"],
@@ -1535,9 +1531,9 @@ async def get_inventory_summary(current_user: User = Depends(get_current_user)):
             total_pieces=total_pieces,
             low_stock=total_weight < 10,  # Alert if less than 10kg
             today_waste_kg=round(today_waste_kg, 2),
-            today_waste_percentage=round(today_waste_percentage, 2),
+            today_waste_percentage=0,  # Removed percentage calculation
             week_waste_kg=round(week_waste_kg, 2),
-            week_waste_percentage=round(week_waste_percentage, 2)
+            week_waste_percentage=0  # Removed percentage calculation
         ))
     
     return summary
