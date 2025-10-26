@@ -259,55 +259,41 @@ const DailyWasteTracking = () => {
               </select>
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-medium mb-2">
-                  Raw Weight Processed (kg) *
-                </label>
-                <input
-                  type="number"
-                  step="0.01"
-                  required
-                  value={formData.raw_weight_kg}
-                  onChange={(e) =>
-                    setFormData({ ...formData, raw_weight_kg: e.target.value })
-                  }
-                  className="w-full border rounded-lg px-3 py-2"
-                  placeholder="e.g., 50.00"
-                />
-                <p className="text-xs text-gray-500 mt-1">
-                  How much raw meat was used today
-                </p>
-              </div>
+            <div>
+              <label className="block text-sm font-medium mb-2">
+                Waste Amount (kg) *
+              </label>
+              <input
+                type="number"
+                step="0.01"
+                required
+                value={formData.waste_kg}
+                onChange={(e) =>
+                  setFormData({ ...formData, waste_kg: e.target.value })
+                }
+                className="w-full border rounded-lg px-3 py-2"
+                placeholder="e.g., 15.00"
+              />
+              <p className="text-xs text-gray-500 mt-1">
+                Total waste in kg to be deducted from inventory
+              </p>
+            </div>
 
-              <div>
-                <label className="block text-sm font-medium mb-2">
-                  Dressed/Sellable Weight (kg) *
-                </label>
-                <input
-                  type="number"
-                  step="0.01"
-                  required
-                  value={formData.dressed_weight_kg}
-                  onChange={(e) =>
-                    setFormData({ ...formData, dressed_weight_kg: e.target.value })
-                  }
-                  className="w-full border rounded-lg px-3 py-2"
-                  placeholder="e.g., 35.00"
-                />
-                <p className="text-xs text-gray-500 mt-1">
-                  How much sellable product obtained
-                </p>
+            <div className="bg-blue-50 border border-blue-200 p-4 rounded-lg">
+              <div className="flex items-start gap-2">
+                <AlertCircle className="h-5 w-5 text-blue-600 mt-0.5" />
+                <div className="flex-1">
+                  <p className="font-semibold text-blue-900 mb-1">
+                    ℹ️ Note
+                  </p>
+                  <p className="text-sm text-blue-800">
+                    This waste amount will be directly deducted from your inventory stock using FIFO (First In, First Out) method.
+                  </p>
+                </div>
               </div>
             </div>
 
-            {formData.raw_weight_kg && formData.dressed_weight_kg && (
-              <div className="bg-amber-50 border border-amber-200 p-4 rounded-lg">
-                <div className="flex items-start gap-2">
-                  <AlertCircle className="h-5 w-5 text-amber-600 mt-0.5" />
-                  <div className="flex-1">
-                    <p className="font-semibold text-amber-900 mb-2">
-                      📊 Automatic Calculation
+            <div>
                     </p>
                     <div className="grid grid-cols-3 gap-3 text-sm">
                       <div>
