@@ -83,6 +83,13 @@ const NewPOS = () => {
     if (!product || !category) return;
 
     const qty = parseFloat(quantityKg);
+    let quantityInKg = qty;
+    
+    // If product is sold by package, convert packages to kg
+    if (product.sale_unit === "package") {
+      quantityInKg = qty * product.package_weight_kg;
+    }
+    
     const total = qty * product.selling_price;
 
     const cartItem = {
@@ -90,8 +97,10 @@ const NewPOS = () => {
       derived_product_name: product.name,
       main_category_id: category.id,
       main_category_name: category.name,
-      quantity_kg: qty,
+      quantity_kg: quantityInKg,  // Always store in kg for inventory deduction
+      quantity_display: product.sale_unit === "package" ? `${qty} pkg` : `${qty} kg`,
       selling_price: product.selling_price,
+      sale_unit: product.sale_unit,
       total: total,
     };
 
