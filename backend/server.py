@@ -1631,6 +1631,34 @@ async def delete_inventory_purchase(purchase_id: str, current_user: User = Depen
     logger.info(f"Purchase deleted: {purchase_id}")
     return {"message": "Purchase deleted successfully"}
 
+# Stock Alerts
+@api_router.get("/stock-alerts")
+async def get_stock_alerts(current_user: User = Depends(get_current_user)):
+    # Get all main categories
+    categories = await db.main_categories.find({}, {"_id": 0}).to_list(length=None)
+    
+    alerts = []
+    for category in categories:
+        # Get all purchases for this category
+        purchases = await db.inventory_purchases.find(
+            {"main_category_id": category["id"]},
+            {"_id": 0}
+        ).to_list(length=None)
+        
+        total_weight = sum(p.get("remaining_weight_kg", 0) for p in purchases)
+        
+        # Low stock if less than 10kg
+        if total_weight < 10:
+            alerts.append({
+                "category_id": category["id"],
+                "category_name": category["name"],
+                "current_stock_kg": round(total_weight, 2),
+                "alert_level": "critical" if total_weight < 5 else "warning",
+                "message": f"Low stock alert: Only {round(total_weight, 2)}kg remaining"
+            })
+    
+    return alerts
+
 # Daily Pieces Tracking
 @api_router.get("/daily-pieces-tracking", response_model=List[DailyPiecesTracking])
 async def get_daily_pieces_tracking(
