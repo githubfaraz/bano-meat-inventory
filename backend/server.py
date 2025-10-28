@@ -1705,6 +1705,128 @@ async def create_daily_pieces_tracking(tracking: DailyPiecesTrackingCreate, curr
     logger.info(f"Daily pieces tracking created: {category['name']} - {tracking.pieces_sold} pieces on {tracking_date}")
     return new_tracking
 
+@api_router.put("/daily-pieces-tracking/{tracking_id}")
+async def update_daily_pieces_tracking(
+    tracking_id: str,
+    update_data: DailyPiecesTrackingCreate,
+    current_user: User = Depends(get_current_user)
+):
+    # Check if user is admin
+    user_doc = await db.users.find_one({"id": current_user.id}, {"_id": 0})
+    if not user_doc.get('is_admin', False):
+        raise HTTPException(status_code=403, detail="Only admin can edit daily pieces tracking")
+    
+    # Get existing tracking
+    existing_tracking = await db.daily_pieces_tracking.find_one({"id": tracking_id}, {"_id": 0})
+    if not existing_tracking:
+        raise HTTPException(status_code=404, detail="Tracking record not found")
+    
+    # Get category
+    category = await db.main_categories.find_one({"id": update_data.main_category_id}, {"_id": 0})
+    if not category:
+        raise HTTPException(status_code=404, detail="Main category not found")
+    
+    # Calculate the difference in pieces to adjust inventory
+    old_pieces_sold = existing_tracking.get("pieces_sold", 0)
+    new_pieces_sold = update_data.pieces_sold
+    pieces_difference = new_pieces_sold - old_pieces_sold
+    
+    # If pieces increased, deduct more. If decreased, add back
+    if pieces_difference != 0:
+        purchases = await db.inventory_purchases.find(
+            {"main_category_id": update_data.main_category_id},
+            {"_id": 0}
+        ).sort("purchase_date", 1 if pieces_difference > 0 else -1).to_list(length=None)
+        
+        pieces_to_adjust = abs(pieces_difference)
+        for purchase in purchases:
+            if pieces_to_adjust <= 0:
+                break
+            
+            remaining_pieces = purchase.get("remaining_pieces", 0) or 0
+            
+            if pieces_difference > 0:  # Need to deduct more pieces
+                if remaining_pieces > 0:
+                    deduction = min(remaining_pieces, pieces_to_adjust)
+                    new_remaining = remaining_pieces - deduction
+                    pieces_to_adjust -= deduction
+                    
+                    await db.inventory_purchases.update_one(
+                        {"id": purchase["id"]},
+                        {"$set": {"remaining_pieces": new_remaining}}
+                    )
+            else:  # Need to add back pieces
+                total_pieces = purchase.get("total_pieces", 0) or 0
+                if remaining_pieces < total_pieces:
+                    addition = min(total_pieces - remaining_pieces, pieces_to_adjust)
+                    new_remaining = remaining_pieces + addition
+                    pieces_to_adjust -= addition
+                    
+                    await db.inventory_purchases.update_one(
+                        {"id": purchase["id"]},
+                        {"$set": {"remaining_pieces": new_remaining}}
+                    )
+    
+    # Update tracking record
+    tracking_date = update_data.tracking_date if update_data.tracking_date else existing_tracking.get("tracking_date")
+    
+    await db.daily_pieces_tracking.update_one(
+        {"id": tracking_id},
+        {"$set": {
+            "main_category_id": update_data.main_category_id,
+            "main_category_name": category["name"],
+            "tracking_date": tracking_date,
+            "pieces_sold": new_pieces_sold
+        }}
+    )
+    
+    updated_tracking = await db.daily_pieces_tracking.find_one({"id": tracking_id}, {"_id": 0})
+    logger.info(f"Daily pieces tracking updated: {tracking_id}")
+    return DailyPiecesTracking(**updated_tracking)
+
+@api_router.delete("/daily-pieces-tracking/{tracking_id}")
+async def delete_daily_pieces_tracking(tracking_id: str, current_user: User = Depends(get_current_user)):
+    # Check if user is admin
+    user_doc = await db.users.find_one({"id": current_user.id}, {"_id": 0})
+    if not user_doc.get('is_admin', False):
+        raise HTTPException(status_code=403, detail="Only admin can delete daily pieces tracking")
+    
+    # Get existing tracking
+    existing_tracking = await db.daily_pieces_tracking.find_one({"id": tracking_id}, {"_id": 0})
+    if not existing_tracking:
+        raise HTTPException(status_code=404, detail="Tracking record not found")
+    
+    # Add back the pieces to inventory
+    pieces_to_add_back = existing_tracking.get("pieces_sold", 0)
+    
+    if pieces_to_add_back > 0:
+        purchases = await db.inventory_purchases.find(
+            {"main_category_id": existing_tracking["main_category_id"]},
+            {"_id": 0}
+        ).sort("purchase_date", -1).to_list(length=None)
+        
+        for purchase in purchases:
+            if pieces_to_add_back <= 0:
+                break
+            
+            remaining_pieces = purchase.get("remaining_pieces", 0) or 0
+            total_pieces = purchase.get("total_pieces", 0) or 0
+            
+            if remaining_pieces < total_pieces:
+                addition = min(total_pieces - remaining_pieces, pieces_to_add_back)
+                new_remaining = remaining_pieces + addition
+                pieces_to_add_back -= addition
+                
+                await db.inventory_purchases.update_one(
+                    {"id": purchase["id"]},
+                    {"$set": {"remaining_pieces": new_remaining}}
+                )
+    
+    # Delete tracking record
+    await db.daily_pieces_tracking.delete_one({"id": tracking_id})
+    logger.info(f"Daily pieces tracking deleted: {tracking_id}")
+    return {"message": "Pieces tracking deleted successfully"}
+
 # Daily Waste Tracking
 @api_router.get("/daily-waste-tracking", response_model=List[DailyWasteTracking])
 async def get_daily_waste_tracking(
