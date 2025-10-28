@@ -2126,25 +2126,6 @@ async def create_pos_sale(sale: POSSaleCreateNew, current_user: User = Depends(g
                         {"id": purchase["id"]},
                         {"$set": {"remaining_pieces": new_remaining}}
                     )
-        ).sort("purchase_date", 1).to_list(length=None)
-        
-        for purchase in purchases:
-            if weight_to_deduct <= 0:
-                break
-            
-            remaining = purchase.get("remaining_weight_kg", 0)
-            if remaining > 0:
-                deduction = min(remaining, weight_to_deduct)
-                new_remaining = remaining - deduction
-                weight_to_deduct -= deduction
-                
-                await db.inventory_purchases.update_one(
-                    {"id": purchase["id"]},
-                    {"$set": {"remaining_weight_kg": round(new_remaining, 2)}}
-                )
-        
-        if weight_to_deduct > 0:
-            logger.warning(f"Not enough inventory for {item.main_category_name}. {weight_to_deduct}kg could not be deducted.")
     
     # Create sale record
     new_sale = POSSaleNew(**sale.dict())
