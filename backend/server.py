@@ -1898,6 +1898,133 @@ async def create_daily_waste_tracking(tracking: DailyWasteTrackingCreate, curren
     logger.info(f"Daily waste tracking created: {category['name']} - Waste: {tracking.waste_kg}kg on {tracking_date}")
     return new_tracking
 
+@api_router.put("/daily-waste-tracking/{tracking_id}")
+async def update_daily_waste_tracking(
+    tracking_id: str,
+    update_data: DailyWasteTrackingCreate,
+    current_user: User = Depends(get_current_user)
+):
+    # Check if user is admin
+    user_doc = await db.users.find_one({"id": current_user.id}, {"_id": 0})
+    if not user_doc.get('is_admin', False):
+        raise HTTPException(status_code=403, detail="Only admin can edit daily waste tracking")
+    
+    # Get existing tracking
+    existing_tracking = await db.daily_waste_tracking.find_one({"id": tracking_id}, {"_id": 0})
+    if not existing_tracking:
+        raise HTTPException(status_code=404, detail="Tracking record not found")
+    
+    # Get category
+    category = await db.main_categories.find_one({"id": update_data.main_category_id}, {"_id": 0})
+    if not category:
+        raise HTTPException(status_code=404, detail="Main category not found")
+    
+    # Validate waste amount
+    if update_data.waste_kg <= 0:
+        raise HTTPException(status_code=400, detail="Waste weight must be greater than 0")
+    
+    # Calculate the difference in waste to adjust inventory
+    old_waste_kg = existing_tracking.get("waste_kg", 0)
+    new_waste_kg = update_data.waste_kg
+    waste_difference = new_waste_kg - old_waste_kg
+    
+    # If waste increased, deduct more. If decreased, add back
+    if waste_difference != 0:
+        purchases = await db.inventory_purchases.find(
+            {"main_category_id": update_data.main_category_id},
+            {"_id": 0}
+        ).sort("purchase_date", 1 if waste_difference > 0 else -1).to_list(length=None)
+        
+        weight_to_adjust = abs(waste_difference)
+        for purchase in purchases:
+            if weight_to_adjust <= 0:
+                break
+            
+            remaining_weight = purchase.get("remaining_weight_kg", 0)
+            
+            if waste_difference > 0:  # Need to deduct more weight
+                if remaining_weight > 0:
+                    deduction = min(remaining_weight, weight_to_adjust)
+                    new_remaining = remaining_weight - deduction
+                    weight_to_adjust -= deduction
+                    
+                    await db.inventory_purchases.update_one(
+                        {"id": purchase["id"]},
+                        {"$set": {"remaining_weight_kg": round(new_remaining, 2)}}
+                    )
+            else:  # Need to add back weight
+                total_weight = purchase.get("total_weight_kg", 0)
+                if remaining_weight < total_weight:
+                    addition = min(total_weight - remaining_weight, weight_to_adjust)
+                    new_remaining = remaining_weight + addition
+                    weight_to_adjust -= addition
+                    
+                    await db.inventory_purchases.update_one(
+                        {"id": purchase["id"]},
+                        {"$set": {"remaining_weight_kg": round(new_remaining, 2)}}
+                    )
+    
+    # Update tracking record
+    tracking_date = update_data.tracking_date if update_data.tracking_date else existing_tracking.get("tracking_date")
+    
+    await db.daily_waste_tracking.update_one(
+        {"id": tracking_id},
+        {"$set": {
+            "main_category_id": update_data.main_category_id,
+            "main_category_name": category["name"],
+            "tracking_date": tracking_date,
+            "waste_kg": round(new_waste_kg, 2),
+            "notes": update_data.notes
+        }}
+    )
+    
+    updated_tracking = await db.daily_waste_tracking.find_one({"id": tracking_id}, {"_id": 0})
+    logger.info(f"Daily waste tracking updated: {tracking_id}")
+    return DailyWasteTracking(**updated_tracking)
+
+@api_router.delete("/daily-waste-tracking/{tracking_id}")
+async def delete_daily_waste_tracking(tracking_id: str, current_user: User = Depends(get_current_user)):
+    # Check if user is admin
+    user_doc = await db.users.find_one({"id": current_user.id}, {"_id": 0})
+    if not user_doc.get('is_admin', False):
+        raise HTTPException(status_code=403, detail="Only admin can delete daily waste tracking")
+    
+    # Get existing tracking
+    existing_tracking = await db.daily_waste_tracking.find_one({"id": tracking_id}, {"_id": 0})
+    if not existing_tracking:
+        raise HTTPException(status_code=404, detail="Tracking record not found")
+    
+    # Add back the waste weight to inventory
+    weight_to_add_back = existing_tracking.get("waste_kg", 0)
+    
+    if weight_to_add_back > 0:
+        purchases = await db.inventory_purchases.find(
+            {"main_category_id": existing_tracking["main_category_id"]},
+            {"_id": 0}
+        ).sort("purchase_date", -1).to_list(length=None)
+        
+        for purchase in purchases:
+            if weight_to_add_back <= 0:
+                break
+            
+            remaining_weight = purchase.get("remaining_weight_kg", 0)
+            total_weight = purchase.get("total_weight_kg", 0)
+            
+            if remaining_weight < total_weight:
+                addition = min(total_weight - remaining_weight, weight_to_add_back)
+                new_remaining = remaining_weight + addition
+                weight_to_add_back -= addition
+                
+                await db.inventory_purchases.update_one(
+                    {"id": purchase["id"]},
+                    {"$set": {"remaining_weight_kg": round(new_remaining, 2)}}
+                )
+    
+    # Delete tracking record
+    await db.daily_waste_tracking.delete_one({"id": tracking_id})
+    logger.info(f"Daily waste tracking deleted: {tracking_id}")
+    return {"message": "Waste tracking deleted successfully"}
+
 # New POS Sales
 @api_router.post("/pos-sales", response_model=POSSaleNew)
 async def create_pos_sale(sale: POSSaleCreateNew, current_user: User = Depends(get_current_user)):
