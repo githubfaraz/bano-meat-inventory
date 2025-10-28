@@ -216,7 +216,11 @@ const DerivedProducts = () => {
                 <div className="flex items-center justify-between">
                   <span className="text-sm text-gray-600">Unit:</span>
                   <span className="text-sm font-medium">
-                    {product.sale_unit === "weight" ? "Weight (kg)" : `Package (${product.package_weight_kg}kg)`}
+                    {product.sale_unit === "weight" 
+                      ? "Weight (kg)" 
+                      : product.sale_unit === "package" && product.package_weight_kg
+                        ? `Package (${product.package_weight_kg * 1000}g)`
+                        : "Package"}
                   </span>
                 </div>
                 <div className="flex items-center justify-between">
