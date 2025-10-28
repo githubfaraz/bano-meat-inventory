@@ -404,7 +404,8 @@ class POSSaleItemNew(BaseModel):
     derived_product_name: str
     main_category_id: str
     main_category_name: str
-    quantity_kg: float
+    quantity_kg: float  # Weight in kg (for weight/package) or 0 (for pieces)
+    quantity_pieces: Optional[int] = None  # Number of pieces (for pieces unit)
     selling_price: float
     total: float
 
