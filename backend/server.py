@@ -2075,14 +2075,57 @@ async def create_pos_sale(sale: POSSaleCreateNew, current_user: User = Depends(g
         if not category:
             raise HTTPException(status_code=404, detail=f"Main category {item.main_category_id} not found")
     
-    # Deduct inventory weight from purchases (FIFO)
+    # Deduct inventory weight/pieces from purchases (FIFO)
     for item in sale.items:
-        weight_to_deduct = item.quantity_kg
+        # Deduct weight if applicable (weight or package units)
+        if item.quantity_kg > 0:
+            weight_to_deduct = item.quantity_kg
+            
+            # Get all purchases for this main category, sorted by purchase date (FIFO)
+            purchases = await db.inventory_purchases.find(
+                {"main_category_id": item.main_category_id},
+                {"_id": 0}
+            ).sort("purchase_date", 1).to_list(length=None)
+            
+            for purchase in purchases:
+                if weight_to_deduct <= 0:
+                    break
+                
+                remaining = purchase.get("remaining_weight_kg", 0)
+                if remaining > 0:
+                    deduction = min(remaining, weight_to_deduct)
+                    new_remaining = remaining - deduction
+                    weight_to_deduct -= deduction
+                    
+                    await db.inventory_purchases.update_one(
+                        {"id": purchase["id"]},
+                        {"$set": {"remaining_weight_kg": round(new_remaining, 2)}}
+                    )
         
-        # Get all purchases for this main category, sorted by purchase date (FIFO)
-        purchases = await db.inventory_purchases.find(
-            {"main_category_id": item.main_category_id},
-            {"_id": 0}
+        # Deduct pieces if applicable (pieces unit)
+        if item.quantity_pieces and item.quantity_pieces > 0:
+            pieces_to_deduct = item.quantity_pieces
+            
+            # Get all purchases for this main category, sorted by purchase date (FIFO)
+            purchases = await db.inventory_purchases.find(
+                {"main_category_id": item.main_category_id},
+                {"_id": 0}
+            ).sort("purchase_date", 1).to_list(length=None)
+            
+            for purchase in purchases:
+                if pieces_to_deduct <= 0:
+                    break
+                
+                remaining_pieces = purchase.get("remaining_pieces", 0) or 0
+                if remaining_pieces > 0:
+                    deduction = min(remaining_pieces, pieces_to_deduct)
+                    new_remaining = remaining_pieces - deduction
+                    pieces_to_deduct -= deduction
+                    
+                    await db.inventory_purchases.update_one(
+                        {"id": purchase["id"]},
+                        {"$set": {"remaining_pieces": new_remaining}}
+                    )
         ).sort("purchase_date", 1).to_list(length=None)
         
         for purchase in purchases:
