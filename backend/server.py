@@ -1391,8 +1391,14 @@ async def create_derived_product(product: DerivedProductCreate, current_user: Us
         raise HTTPException(status_code=404, detail="Main category not found")
     
     # Validate sale_unit
-    if product.sale_unit not in ["weight", "package"]:
-        raise HTTPException(status_code=400, detail="sale_unit must be 'weight' or 'package'")
+    if product.sale_unit not in ["weight", "package", "pieces"]:
+        raise HTTPException(status_code=400, detail="sale_unit must be 'weight', 'package', or 'pieces'")
+    
+    # Validate pieces unit only for Mutton and Frozen
+    if product.sale_unit == "pieces":
+        category_name = category["name"].lower()
+        if "mutton" not in category_name and "frozen" not in category_name:
+            raise HTTPException(status_code=400, detail="Pieces unit is only allowed for Mutton and Frozen categories")
     
     # Validate package_weight_kg for package unit
     if product.sale_unit == "package":
