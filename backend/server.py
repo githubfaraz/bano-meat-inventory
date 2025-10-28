@@ -1538,6 +1538,99 @@ async def get_inventory_summary(current_user: User = Depends(get_current_user)):
     
     return summary
 
+@api_router.put("/inventory-purchases/{purchase_id}")
+async def update_inventory_purchase(
+    purchase_id: str,
+    update_data: InventoryPurchaseCreate,
+    current_user: User = Depends(get_current_user)
+):
+    # Check if user is admin
+    user_doc = await db.users.find_one({"id": current_user.id}, {"_id": 0})
+    if not user_doc.get('is_admin', False):
+        raise HTTPException(status_code=403, detail="Only admin can edit purchases")
+    
+    # Get existing purchase
+    existing_purchase = await db.inventory_purchases.find_one({"id": purchase_id}, {"_id": 0})
+    if not existing_purchase:
+        raise HTTPException(status_code=404, detail="Purchase not found")
+    
+    # Get category and vendor
+    category = await db.main_categories.find_one({"id": update_data.main_category_id}, {"_id": 0})
+    if not category:
+        raise HTTPException(status_code=404, detail="Main category not found")
+    
+    vendor = await db.vendors.find_one({"id": update_data.vendor_id}, {"_id": 0})
+    if not vendor:
+        raise HTTPException(status_code=404, detail="Vendor not found")
+    
+    # Calculate the difference in weights/pieces to adjust inventory
+    old_total_weight = existing_purchase.get("total_weight_kg", 0)
+    old_remaining_weight = existing_purchase.get("remaining_weight_kg", 0)
+    old_total_pieces = existing_purchase.get("total_pieces", 0) or 0
+    old_remaining_pieces = existing_purchase.get("remaining_pieces", 0) or 0
+    
+    new_total_weight = update_data.total_weight_kg
+    new_total_pieces = update_data.total_pieces or 0
+    
+    # Calculate how much has been used
+    used_weight = old_total_weight - old_remaining_weight
+    used_pieces = old_total_pieces - old_remaining_pieces
+    
+    # New remaining = new_total - used
+    new_remaining_weight = max(0, new_total_weight - used_weight)
+    new_remaining_pieces = max(0, new_total_pieces - used_pieces) if new_total_pieces > 0 else None
+    
+    # Update purchase
+    total_cost = update_data.total_weight_kg * update_data.cost_per_kg
+    
+    await db.inventory_purchases.update_one(
+        {"id": purchase_id},
+        {"$set": {
+            "main_category_id": update_data.main_category_id,
+            "main_category_name": category["name"],
+            "vendor_id": update_data.vendor_id,
+            "vendor_name": vendor["name"],
+            "total_weight_kg": new_total_weight,
+            "total_pieces": new_total_pieces,
+            "remaining_weight_kg": round(new_remaining_weight, 2),
+            "remaining_pieces": new_remaining_pieces,
+            "cost_per_kg": update_data.cost_per_kg,
+            "total_cost": round(total_cost, 2),
+            "notes": update_data.notes
+        }}
+    )
+    
+    updated_purchase = await db.inventory_purchases.find_one({"id": purchase_id}, {"_id": 0})
+    logger.info(f"Purchase updated: {purchase_id}")
+    return InventoryPurchase(**updated_purchase)
+
+@api_router.delete("/inventory-purchases/{purchase_id}")
+async def delete_inventory_purchase(purchase_id: str, current_user: User = Depends(get_current_user)):
+    # Check if user is admin
+    user_doc = await db.users.find_one({"id": current_user.id}, {"_id": 0})
+    if not user_doc.get('is_admin', False):
+        raise HTTPException(status_code=403, detail="Only admin can delete purchases")
+    
+    # Get existing purchase
+    existing_purchase = await db.inventory_purchases.find_one({"id": purchase_id}, {"_id": 0})
+    if not existing_purchase:
+        raise HTTPException(status_code=404, detail="Purchase not found")
+    
+    # Check if purchase has been partially used
+    remaining_weight = existing_purchase.get("remaining_weight_kg", 0)
+    total_weight = existing_purchase.get("total_weight_kg", 0)
+    
+    if remaining_weight < total_weight:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Cannot delete purchase that has been partially used. Remaining: {remaining_weight}kg, Total: {total_weight}kg"
+        )
+    
+    # Delete purchase
+    await db.inventory_purchases.delete_one({"id": purchase_id})
+    logger.info(f"Purchase deleted: {purchase_id}")
+    return {"message": "Purchase deleted successfully"}
+
 # Daily Pieces Tracking
 @api_router.get("/daily-pieces-tracking", response_model=List[DailyPiecesTracking])
 async def get_daily_pieces_tracking(
