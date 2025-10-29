@@ -29,9 +29,14 @@ const DailyPiecesTracking = () => {
 
   const checkAdminStatus = () => {
     const userStr = localStorage.getItem("user");
-    if (userStr) {
-      const user = JSON.parse(userStr);
-      setIsAdmin(user.is_admin || false);
+    if (userStr && userStr !== "undefined" && userStr !== "null") {
+      try {
+        const user = JSON.parse(userStr);
+        setIsAdmin(user.is_admin || false);
+      } catch (error) {
+        console.error("Error parsing user:", error);
+        setIsAdmin(false);
+      }
     }
   };
 
