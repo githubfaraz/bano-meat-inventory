@@ -225,6 +225,121 @@ const InventoryManagement = () => {
     return '📦';
   };
 
+  // Helper component for Add Purchase Dialog - must be defined before use
+  const AddPurchaseDialog = () => (
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+      <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4 max-h-[90vh] overflow-y-auto">
+        <h3 className="text-xl font-bold mb-4">Add New Purchase</h3>
+        <form onSubmit={handleAddPurchase} className="space-y-4">
+          <div>
+            <label className="block text-sm font-medium mb-2">Category *</label>
+            <select
+              required
+              value={addPurchaseForm.main_category_id}
+              onChange={(e) => setAddPurchaseForm({ ...addPurchaseForm, main_category_id: e.target.value })}
+              className="w-full border rounded-lg px-3 py-2"
+            >
+              <option value="">Select Category</option>
+              {categories.map((cat) => (
+                <option key={cat.main_category_id} value={cat.main_category_id}>
+                  {cat.main_category_name}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div>
+            <label className="block text-sm font-medium mb-2">Vendor *</label>
+            <select
+              required
+              value={addPurchaseForm.vendor_id}
+              onChange={(e) => setAddPurchaseForm({ ...addPurchaseForm, vendor_id: e.target.value })}
+              className="w-full border rounded-lg px-3 py-2"
+            >
+              <option value="">Select Vendor</option>
+              {vendors.map((vendor) => (
+                <option key={vendor.id} value={vendor.id}>
+                  {vendor.name}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div>
+            <label className="block text-sm font-medium mb-2">Raw Weight (kg) *</label>
+            <input
+              type="number"
+              required
+              step="0.01"
+              min="0.01"
+              value={addPurchaseForm.raw_weight_kg}
+              onChange={(e) => setAddPurchaseForm({ ...addPurchaseForm, raw_weight_kg: e.target.value })}
+              className="w-full border rounded-lg px-3 py-2"
+              placeholder="Enter weight in kg"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium mb-2">Total Pieces (Optional)</label>
+            <input
+              type="number"
+              min="0"
+              value={addPurchaseForm.total_pieces}
+              onChange={(e) => setAddPurchaseForm({ ...addPurchaseForm, total_pieces: e.target.value })}
+              className="w-full border rounded-lg px-3 py-2"
+              placeholder="Enter total pieces"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium mb-2">Cost per kg *</label>
+            <input
+              type="number"
+              required
+              step="0.01"
+              min="0"
+              value={addPurchaseForm.cost_per_kg}
+              onChange={(e) => setAddPurchaseForm({ ...addPurchaseForm, cost_per_kg: e.target.value })}
+              className="w-full border rounded-lg px-3 py-2"
+              placeholder="Enter cost per kg"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium mb-2">Purchase Date *</label>
+            <input
+              type="date"
+              required
+              value={addPurchaseForm.purchase_date}
+              onChange={(e) => setAddPurchaseForm({ ...addPurchaseForm, purchase_date: e.target.value })}
+              className="w-full border rounded-lg px-3 py-2"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium mb-2">Notes</label>
+            <textarea
+              value={addPurchaseForm.notes}
+              onChange={(e) => setAddPurchaseForm({ ...addPurchaseForm, notes: e.target.value })}
+              className="w-full border rounded-lg px-3 py-2"
+              rows={3}
+              placeholder="Optional notes"
+            />
+          </div>
+          <div className="flex gap-2 justify-end">
+            <button
+              type="button"
+              onClick={() => setShowAddPurchase(false)}
+              className="px-4 py-2 border rounded-lg hover:bg-gray-50"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              className="px-4 py-2 bg-emerald-500 text-white rounded-lg hover:bg-emerald-600"
+            >
+              Add Purchase
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+
   if (loading) {
     return (
       <div className="flex justify-center items-center h-screen">
