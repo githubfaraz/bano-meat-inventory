@@ -332,6 +332,7 @@ class InventoryPurchaseCreate(BaseModel):
     total_weight_kg: float
     total_pieces: Optional[int] = None
     cost_per_kg: float
+    purchase_date: Optional[str] = None  # YYYY-MM-DD format
     notes: Optional[str] = None
 
 class InventoryPurchase(BaseModel):
