@@ -541,8 +541,8 @@ const InventoryManagement = () => {
                 >
                   <option value="">Select Category</option>
                   {categories.map((cat) => (
-                    <option key={cat.id} value={cat.id}>
-                      {cat.name}
+                    <option key={cat.main_category_id} value={cat.main_category_id}>
+                      {cat.main_category_name}
                     </option>
                   ))}
                 </select>
