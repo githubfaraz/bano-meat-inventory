@@ -143,6 +143,38 @@ const InventoryManagement = () => {
     }
   };
 
+  const handleAddPurchase = async (e) => {
+    e.preventDefault();
+    try {
+      const token = localStorage.getItem("token");
+      await axios.post(`${API}/inventory-purchases`, {
+        main_category_id: addPurchaseForm.main_category_id,
+        vendor_id: addPurchaseForm.vendor_id,
+        raw_weight_kg: parseFloat(addPurchaseForm.raw_weight_kg),
+        total_pieces: parseInt(addPurchaseForm.total_pieces) || 0,
+        cost_per_kg: parseFloat(addPurchaseForm.cost_per_kg),
+        purchase_date: addPurchaseForm.purchase_date,
+        notes: addPurchaseForm.notes
+      }, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      setShowAddPurchase(false);
+      setAddPurchaseForm({
+        main_category_id: "",
+        vendor_id: "",
+        raw_weight_kg: "",
+        total_pieces: "",
+        cost_per_kg: "",
+        purchase_date: new Date().toISOString().split("T")[0],
+        notes: ""
+      });
+      fetchCategories();
+      alert("Purchase added successfully");
+    } catch (error) {
+      alert(error.response?.data?.detail || "Failed to add purchase");
+    }
+  };
+
   const getCategoryIcon = (categoryName) => {
     const name = categoryName.toLowerCase();
     if (name.includes('chicken')) return '🐔';
