@@ -427,7 +427,7 @@ const InventoryManagement = () => {
                       <div className="flex-1 grid grid-cols-2 gap-4">
                         <div>
                           <p className="text-sm font-medium">Waste Amount</p>
-                          <p className="text-2xl font-bold text-red-600">{waste.waste_kg} kg</p>
+                          <p className="text-2xl font-bold text-red-600">{waste.waste_kg || 0} kg</p>
                         </div>
                         <div>
                           <p className="text-sm font-medium">Deducted From</p>
