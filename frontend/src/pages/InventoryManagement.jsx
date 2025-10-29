@@ -512,6 +512,15 @@ const InventoryManagement = () => {
                 />
               </div>
               <div>
+                <label className="block text-sm font-medium mb-2">Purchase Date *</label>
+                <input
+                  type="date"
+                  value={editingPurchase.purchase_date}
+                  onChange={(e) => setEditingPurchase({ ...editingPurchase, purchase_date: e.target.value })}
+                  className="w-full border rounded-lg px-3 py-2"
+                />
+              </div>
+              <div>
                 <label className="block text-sm font-medium mb-2">Notes</label>
                 <textarea
                   value={editingPurchase.notes}
