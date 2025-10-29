@@ -459,9 +459,13 @@ const InventoryManagement = () => {
                         <div className="mt-2">
                           {sale.items?.map((item, idx) => (
                             <div key={idx} className="text-sm">
-                              <span className="font-medium">{item.product_name}</span>
+                              <span className="font-medium">{item.product_name || 'Unknown Product'}</span>
                               <span className="text-gray-600 ml-2">
-                                {item.weight_kg ? `${item.weight_kg}kg × ₹${item.price_per_kg}/kg` : `${item.quantity}pcs × ₹${item.price}/pc`}
+                                {item.weight_kg 
+                                  ? `${item.weight_kg}kg × ₹${item.price_per_kg || 0}/kg` 
+                                  : item.quantity 
+                                    ? `${item.quantity || 0}pcs × ₹${item.price || 0}/pc`
+                                    : 'N/A'}
                               </span>
                             </div>
                           ))}
