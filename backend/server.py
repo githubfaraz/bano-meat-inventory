@@ -28,11 +28,9 @@ def get_ist_now():
     """Get current time in IST timezone"""
     return datetime.now(IST)
 
-# MongoDB connection with explicit SSL/TLS configuration
+# MongoDB connection
 mongo_url = os.environ['MONGO_URL']
-ssl_ctx = ssl.create_default_context()
-ssl_ctx.minimum_version = ssl.TLSVersion.TLSv1_2
-client = AsyncIOMotorClient(mongo_url, tlsContext=ssl_ctx)
+client = AsyncIOMotorClient(mongo_url)
 db = client[os.environ['DB_NAME']]
 
 # Security
