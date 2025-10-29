@@ -1373,6 +1373,12 @@ async def get_derived_products(main_category_id: Optional[str] = None, current_u
         query["main_category_id"] = main_category_id
     
     products = await db.derived_products.find(query, {"_id": 0}).to_list(length=None)
+    # Ensure backwards compatibility - add default sale_unit if missing
+    for product in products:
+        if 'sale_unit' not in product or not product['sale_unit']:
+            product['sale_unit'] = 'weight'
+        if 'package_weight_kg' not in product:
+            product['package_weight_kg'] = None
     return products
 
 @api_router.post("/derived-products", response_model=DerivedProduct)
