@@ -195,7 +195,15 @@ const InventoryManagement = () => {
   if (!selectedCategory) {
     return (
       <div className="p-6">
-        <h1 className="text-2xl font-bold mb-6">Inventory Overview</h1>
+        <div className="flex justify-between items-center mb-6">
+          <h1 className="text-2xl font-bold">Inventory Overview</h1>
+          <button
+            onClick={() => setShowAddPurchase(true)}
+            className="bg-emerald-600 text-white px-4 py-2 rounded-lg hover:bg-emerald-700 flex items-center gap-2"
+          >
+            📦 Add Purchase
+          </button>
+        </div>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
           {categories.map((cat) => (
             <div
@@ -212,7 +220,7 @@ const InventoryManagement = () => {
                 <div>
                   <p className="text-sm text-gray-600">Current Stock</p>
                   <p className="text-2xl font-bold text-emerald-600">
-                    {cat.remaining_weight_kg} kg
+                    {cat.remaining_weight_kg || 0} kg
                   </p>
                 </div>
                 <div>
