@@ -133,7 +133,18 @@ const Layout = ({ setAuth }) => {
           </div>
         </nav>
 
-        <div className="p-4 border-t border-gray-200">
+        <div className="p-4 border-t border-gray-200 space-y-3">
+          {/* User Info Display */}
+          <div className="px-4 py-2 bg-gray-50 rounded-lg text-sm">
+            <p className="font-semibold text-gray-700">{user?.full_name || user?.username || "User"}</p>
+            <p className="text-xs text-gray-500">{user?.email || ""}</p>
+            {isAdmin && (
+              <span className="inline-block mt-1 px-2 py-0.5 bg-emerald-100 text-emerald-700 text-xs rounded">
+                Admin
+              </span>
+            )}
+          </div>
+          
           <Button
             onClick={handleLogout}
             variant="ghost"
