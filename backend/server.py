@@ -29,7 +29,7 @@ def get_ist_now():
 
 # MongoDB connection
 mongo_url = os.environ['MONGO_URL']
-client = AsyncIOMotorClient(mongo_url)
+client = AsyncIOMotorClient(mongo_url, tls=True, tlsAllowInvalidCertificates=False)
 db = client[os.environ['DB_NAME']]
 
 # Security
