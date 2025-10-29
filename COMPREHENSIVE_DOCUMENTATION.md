@@ -426,17 +426,51 @@ POST   /api/users
 
 ## 7. Deployment Guide
 
-### 7.1 VPS Deployment (Production)
+### 🚨 **CRITICAL: Deployment Architecture**
+
+**This application uses a SPLIT DEPLOYMENT setup:**
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│  FRONTEND (Hostinger Shared Hosting)                        │
+│  - React build deployed to Hostinger                        │
+│  - Static files served by Hostinger                         │
+│  - URL: https://banofresh.com                               │
+│  - Makes API calls to backend VPS                           │
+└─────────────────────────────────────────────────────────────┘
+                           │
+                           │ HTTPS API Calls
+                           ▼
+┌─────────────────────────────────────────────────────────────┐
+│  BACKEND (VPS with Root Access)                             │
+│  - FastAPI on Port 8001 (systemd service)                   │
+│  - Nginx reverse proxy                                      │
+│  - URL: https://backend.banofresh.com (or VPS IP)          │
+│  - Connects to MongoDB Atlas                                │
+└─────────────────────────────────────────────────────────────┘
+                           │
+                           │ MongoDB Connection
+                           ▼
+┌─────────────────────────────────────────────────────────────┐
+│  DATABASE (MongoDB Atlas Cloud)                             │
+│  - Managed MongoDB cluster                                  │
+│  - IP Whitelist required for VPS                            │
+└─────────────────────────────────────────────────────────────┘
+```
+
+### 7.1 Backend Deployment (VPS)
+
+**Location:** Self-managed VPS (typically `/var/www/bano-fresh/backend`)
 
 **Prerequisites:**
-- VPS with Python 3.11
-- MongoDB Atlas account
-- Domain/subdomain (optional)
+- VPS with Python 3.11 and root access
+- MongoDB Atlas account with IP whitelist configured
+- Domain/subdomain for backend (e.g., backend.banofresh.com) OR VPS IP
 
-**Backend Deployment:**
+**Backend Deployment Steps:**
 ```bash
 # 1. Clone repository
-git clone -b vps https://github.com/githubfaraz/bano-meat-inventory.git
+git clone https://github.com/githubfaraz/bano-meat-inventory.git
 cd bano-meat-inventory/backend
 
 # 2. Setup Python environment
@@ -447,29 +481,209 @@ pip install -r requirements.txt
 # 3. Configure .env
 cp .env.example .env
 nano .env
-# Set MONGO_URL to MongoDB Atlas connection string
-# Set JWT_SECRET_KEY to secure random string
-# Set CORS_ORIGINS to your frontend domain
+```
 
+**Required .env Configuration:**
+```env
+MONGO_URL=mongodb+srv://username:password@cluster.mongodb.net/dbname?retryWrites=true&w=majority
+DB_NAME=bano_fresh_inventory
+JWT_SECRET_KEY=your_super_secret_jwt_key_change_this
+CORS_ORIGINS=https://banofresh.com
+# IMPORTANT: CORS_ORIGINS must match your Hostinger frontend URL
+```
+
+```bash
 # 4. Create systemd service
 sudo nano /etc/systemd/system/bano-fresh-backend.service
-# (See VPS_DEPLOYMENT_GUIDE.md for service file content)
+```
 
-# 5. Start service
+**Systemd Service File Content:**
+```ini
+[Unit]
+Description=Bano Fresh FastAPI Backend
+After=network.target
+
+[Service]
+Type=simple
+User=root
+WorkingDirectory=/var/www/bano-fresh/backend
+Environment="PATH=/var/www/bano-fresh/backend/venv/bin"
+ExecStart=/var/www/bano-fresh/backend/venv/bin/uvicorn server:app --host 127.0.0.1 --port 8001 --workers 2
+Restart=always
+RestartSec=10
+
+[Install]
+WantedBy=multi-user.target
+```
+
+```bash
+# 5. Start and enable service
+sudo systemctl daemon-reload
 sudo systemctl start bano-fresh-backend
 sudo systemctl enable bano-fresh-backend
+sudo systemctl status bano-fresh-backend
 
-# 6. Configure Nginx
-# (See VPS_DEPLOYMENT_GUIDE.md for Nginx config)
+# 6. Configure Nginx reverse proxy
+sudo nano /etc/nginx/sites-available/default
 ```
 
-**Frontend Deployment:**
+**Nginx Configuration:**
+```nginx
+server {
+    listen 80;
+    server_name backend.banofresh.com;  # Your backend domain or VPS IP
+
+    location /api {
+        proxy_pass http://127.0.0.1:8001;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection 'upgrade';
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_cache_bypass $http_upgrade;
+    }
+}
+```
+
+```bash
+# 7. Test and reload Nginx
+sudo nginx -t
+sudo systemctl reload nginx
+
+# 8. Verify backend is running
+curl http://localhost:8001/api/main-categories
+# Should return JSON data
+```
+
+### 7.2 Frontend Deployment (Hostinger Shared Hosting)
+
+**Location:** Hostinger shared hosting (typically `public_html/`)
+
+**CRITICAL CONFIGURATION:**
+
+The frontend MUST be configured to point to the VPS backend URL.
+
+**Step 1: Configure .env.production on your LOCAL machine**
+
 ```bash
 cd frontend
-echo "REACT_APP_BACKEND_URL=https://api.your-domain.com" > .env.production
-yarn build
-# Upload build/ contents to hosting (Hostinger, Netlify, etc.)
+nano .env.production
 ```
+
+**Add this EXACT configuration:**
+```env
+REACT_APP_BACKEND_URL=https://backend.banofresh.com
+# OR if no domain, use VPS IP:
+# REACT_APP_BACKEND_URL=http://YOUR_VPS_IP
+```
+
+**Step 2: Build the frontend**
+```bash
+cd frontend
+yarn install
+yarn build
+# This creates the 'build/' folder with compiled React app
+```
+
+**Step 3: Upload to Hostinger**
+
+Upload the ENTIRE contents of the `build/` folder to Hostinger:
+```
+Local: frontend/build/*
+   ↓ Upload via FTP/SFTP/Hostinger File Manager
+Hostinger: public_html/
+```
+
+**Files to upload:**
+- `index.html`
+- `asset-manifest.json`
+- `favicon.ico`
+- `logo192.png`, `logo512.png`
+- `manifest.json`
+- `robots.txt`
+- `static/` folder (contains all JS/CSS)
+
+**Step 4: Configure Hostinger (if needed)**
+
+Some Hostinger setups need `.htaccess` for React Router:
+```bash
+# In Hostinger public_html/, create/edit .htaccess
+nano .htaccess
+```
+
+Add:
+```apache
+<IfModule mod_rewrite.c>
+  RewriteEngine On
+  RewriteBase /
+  RewriteRule ^index\.html$ - [L]
+  RewriteCond %{REQUEST_FILENAME} !-f
+  RewriteCond %{REQUEST_FILENAME} !-d
+  RewriteRule . /index.html [L]
+</IfModule>
+```
+
+**Step 5: Verify Deployment**
+
+1. Visit your Hostinger URL: `https://banofresh.com`
+2. Open browser console (F12)
+3. Check network tab - API calls should go to `https://backend.banofresh.com/api/*`
+4. Login and verify all features work
+
+### 7.3 Important Notes
+
+**🔴 CRITICAL POINTS:**
+
+1. **Backend and Frontend are SEPARATE servers**
+   - Backend: VPS (your own server)
+   - Frontend: Hostinger (shared hosting)
+
+2. **Backend URL Configuration:**
+   - Frontend `.env.production` must point to backend VPS
+   - Use domain: `https://backend.banofresh.com`
+   - OR VPS IP: `http://123.45.67.89`
+
+3. **CORS Configuration:**
+   - Backend `.env` CORS_ORIGINS must include Hostinger frontend URL
+   - Example: `CORS_ORIGINS=https://banofresh.com`
+
+4. **After ANY frontend code changes:**
+   ```bash
+   cd frontend
+   yarn build
+   # Upload new build/ folder to Hostinger
+   ```
+
+5. **After ANY backend code changes:**
+   ```bash
+   sudo systemctl restart bano-fresh-backend
+   ```
+
+6. **MongoDB Atlas IP Whitelist:**
+   - Must whitelist VPS IP address
+   - Check current IP: `curl ifconfig.me`
+   - Add to MongoDB Atlas → Network Access
+
+### 7.4 Quick Deployment Checklist
+
+**Backend (VPS):**
+- [ ] Backend code uploaded to VPS
+- [ ] `.env` configured with MongoDB URL and CORS
+- [ ] systemd service running (`sudo systemctl status bano-fresh-backend`)
+- [ ] Nginx configured and running
+- [ ] VPS IP whitelisted in MongoDB Atlas
+- [ ] API accessible: `curl http://VPS_IP/api/main-categories`
+
+**Frontend (Hostinger):**
+- [ ] `.env.production` points to backend VPS URL
+- [ ] `yarn build` completed successfully
+- [ ] `build/` folder uploaded to Hostinger `public_html/`
+- [ ] `.htaccess` configured for React Router
+- [ ] Website loads: `https://banofresh.com`
+- [ ] Browser console shows no CORS errors
+- [ ] API calls go to correct backend URL
 
 ### 7.2 Local Development
 
