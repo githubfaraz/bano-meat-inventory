@@ -109,14 +109,25 @@ const InventoryManagement = () => {
   };
 
   const handleEditPurchase = async (purchase) => {
+    // Format date to YYYY-MM-DD for date input
+    const formatDate = (dateString) => {
+      if (!dateString) return new Date().toISOString().split('T')[0];
+      try {
+        const date = new Date(dateString);
+        return date.toISOString().split('T')[0];
+      } catch {
+        return new Date().toISOString().split('T')[0];
+      }
+    };
+
     setEditingPurchase({
       id: purchase.id,
       main_category_id: purchase.main_category_id,
       vendor_id: purchase.vendor_id,
-      raw_weight_kg: purchase.raw_weight_kg,
+      raw_weight_kg: purchase.raw_weight_kg || 0,
       total_pieces: purchase.total_pieces || 0,
-      cost_per_kg: purchase.cost_per_kg,
-      purchase_date: purchase.purchase_date ? purchase.purchase_date.split('T')[0] : new Date().toISOString().split('T')[0],
+      cost_per_kg: purchase.cost_per_kg || 0,
+      purchase_date: formatDate(purchase.purchase_date),
       notes: purchase.notes || ""
     });
   };
