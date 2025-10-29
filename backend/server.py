@@ -39,10 +39,6 @@ SECRET_KEY = os.environ.get('JWT_SECRET_KEY', 'your-secret-key-change-in-product
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 60 * 24  # 24 hours
 
-# Create the main app
-app = FastAPI()
-api_router = APIRouter(prefix="/api")
-
 # Custom JSON response to handle timezone-aware datetimes
 from fastapi.responses import JSONResponse
 from typing import Any
