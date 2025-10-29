@@ -93,9 +93,14 @@ const InventoryManagement = () => {
   };
 
   const handleViewDetails = (category) => {
-    setSelectedCategory(category);
+    setSelectedCategory({
+      id: category.main_category_id,
+      name: category.main_category_name,
+      remaining_weight_kg: category.total_weight_kg,
+      remaining_pieces: category.total_pieces
+    });
     setActiveTab("purchases");
-    fetchDetailData(category.id);
+    fetchDetailData(category.main_category_id);
   };
 
   const handleEditPurchase = async (purchase) => {
