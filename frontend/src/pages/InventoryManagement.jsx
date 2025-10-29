@@ -127,6 +127,7 @@ const InventoryManagement = () => {
           raw_weight_kg: parseFloat(editingPurchase.raw_weight_kg),
           total_pieces: parseInt(editingPurchase.total_pieces) || 0,
           cost_per_kg: parseFloat(editingPurchase.cost_per_kg),
+          purchase_date: editingPurchase.purchase_date,
           notes: editingPurchase.notes || ""
         },
         { headers: { Authorization: `Bearer ${token}` } }
