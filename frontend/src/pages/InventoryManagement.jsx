@@ -12,9 +12,21 @@ const InventoryManagement = () => {
   const [isAdmin, setIsAdmin] = useState(false);
   const [editingPurchase, setEditingPurchase] = useState(null);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(null);
+  const [showAddPurchase, setShowAddPurchase] = useState(false);
+  const [vendors, setVendors] = useState([]);
+  const [addPurchaseForm, setAddPurchaseForm] = useState({
+    main_category_id: "",
+    vendor_id: "",
+    raw_weight_kg: "",
+    total_pieces: "",
+    cost_per_kg: "",
+    purchase_date: new Date().toISOString().split("T")[0],
+    notes: ""
+  });
 
   useEffect(() => {
     fetchCategories();
+    fetchVendors();
     checkAdminStatus();
   }, []);
 
