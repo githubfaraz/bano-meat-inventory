@@ -120,7 +120,14 @@ const InventoryManagement = () => {
       const token = localStorage.getItem("token");
       await axios.put(
         `${API}/inventory-purchases/${editingPurchase.id}`,
-        editingPurchase,
+        {
+          main_category_id: editingPurchase.main_category_id,
+          vendor_id: editingPurchase.vendor_id,
+          raw_weight_kg: parseFloat(editingPurchase.raw_weight_kg),
+          total_pieces: parseInt(editingPurchase.total_pieces) || 0,
+          cost_per_kg: parseFloat(editingPurchase.cost_per_kg),
+          notes: editingPurchase.notes || ""
+        },
         { headers: { Authorization: `Bearer ${token}` } }
       );
       setEditingPurchase(null);
@@ -128,7 +135,12 @@ const InventoryManagement = () => {
       fetchCategories();
       alert("Purchase updated successfully");
     } catch (error) {
-      alert(error.response?.data?.detail || "Failed to update purchase");
+      console.error("Edit error:", error);
+      const errorMessage = error.response?.data?.detail 
+        || error.response?.data?.message 
+        || error.message 
+        || "Failed to update purchase";
+      alert(errorMessage);
     }
   };
 
