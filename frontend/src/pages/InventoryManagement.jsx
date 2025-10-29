@@ -181,6 +181,7 @@ const InventoryManagement = () => {
   };
 
   const getCategoryIcon = (categoryName) => {
+    if (!categoryName) return '📦';
     const name = categoryName.toLowerCase();
     if (name.includes('chicken')) return '🐔';
     if (name.includes('mutton')) return '🐑';
