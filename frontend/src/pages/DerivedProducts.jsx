@@ -326,6 +326,7 @@ const DerivedProducts = () => {
             <div>
               <label className="block text-sm font-medium mb-2">Sale Unit *</label>
               <select
+                key={formData.main_category_id}
                 required
                 value={formData.sale_unit}
                 onChange={(e) => setFormData({ ...formData, sale_unit: e.target.value })}
