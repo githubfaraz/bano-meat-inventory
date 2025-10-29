@@ -140,7 +140,7 @@ const InventoryManagement = () => {
         {
           main_category_id: editingPurchase.main_category_id,
           vendor_id: editingPurchase.vendor_id,
-          raw_weight_kg: parseFloat(editingPurchase.raw_weight_kg),
+          total_weight_kg: parseFloat(editingPurchase.raw_weight_kg), // Backend expects total_weight_kg
           total_pieces: parseInt(editingPurchase.total_pieces) || 0,
           cost_per_kg: parseFloat(editingPurchase.cost_per_kg),
           purchase_date: editingPurchase.purchase_date,
