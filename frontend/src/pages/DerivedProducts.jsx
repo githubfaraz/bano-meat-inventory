@@ -147,6 +147,17 @@ const DerivedProducts = () => {
     return category ? category.name : "Unknown";
   };
 
+  // Get sale unit options based on selected category
+  const getSaleUnitOptions = () => {
+    const selectedCat = categories.find((c) => c.id === formData.main_category_id);
+    const categoryName = selectedCat?.name?.toLowerCase() || "";
+    
+    // Show "Pieces" option for Mutton and Frozen categories
+    const showPiecesOption = categoryName.includes("mutton") || categoryName.includes("frozen");
+    
+    return showPiecesOption;
+  };
+
   if (loading) {
     return <div className="p-8">Loading products...</div>;
   }
