@@ -10,8 +10,21 @@ const Layout = ({ setAuth }) => {
   const location = useLocation();
   const navigate = useNavigate();
   
-  // Get current user from localStorage
-  const user = JSON.parse(localStorage.getItem("user") || "{}");
+  // Get current user from localStorage with safe parsing
+  const getUserFromStorage = () => {
+    try {
+      const userStr = localStorage.getItem("user");
+      if (!userStr || userStr === "undefined" || userStr === "null") {
+        return {};
+      }
+      return JSON.parse(userStr);
+    } catch (error) {
+      console.error("Error parsing user from localStorage:", error);
+      return {};
+    }
+  };
+  
+  const user = getUserFromStorage();
   const isAdmin = user?.is_admin || false;
 
   const handleLogout = () => {
