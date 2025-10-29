@@ -319,7 +319,7 @@ class DerivedProduct(BaseModel):
     main_category_id: str
     name: str
     sku: str
-    sale_unit: str  # "weight", "package", or "pieces"
+    sale_unit: str = "weight"  # "weight", "package", or "pieces" - default to "weight" for backwards compatibility
     package_weight_kg: Optional[float] = None  # Package weight in kg (e.g., 0.5 for 500g)
     selling_price: float
     description: Optional[str] = None
