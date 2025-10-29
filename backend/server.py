@@ -32,7 +32,7 @@ def get_ist_now():
 mongo_url = os.environ['MONGO_URL']
 ssl_ctx = ssl.create_default_context()
 ssl_ctx.minimum_version = ssl.TLSVersion.TLSv1_2
-client = AsyncIOMotorClient(mongo_url, ssl=True, ssl_cert_reqs=ssl.CERT_REQUIRED, ssl_context=ssl_ctx)
+client = AsyncIOMotorClient(mongo_url, tlsContext=ssl_ctx)
 db = client[os.environ['DB_NAME']]
 
 # Security
