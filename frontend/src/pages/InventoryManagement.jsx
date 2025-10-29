@@ -111,6 +111,7 @@ const InventoryManagement = () => {
       raw_weight_kg: purchase.raw_weight_kg,
       total_pieces: purchase.total_pieces || 0,
       cost_per_kg: purchase.cost_per_kg,
+      purchase_date: purchase.purchase_date ? purchase.purchase_date.split('T')[0] : new Date().toISOString().split('T')[0],
       notes: purchase.notes || ""
     });
   };
