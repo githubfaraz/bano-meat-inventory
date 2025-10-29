@@ -14,10 +14,15 @@ const Layout = ({ setAuth }) => {
   const getUserFromStorage = () => {
     try {
       const userStr = localStorage.getItem("user");
+      console.log("Raw user from localStorage:", userStr);
       if (!userStr || userStr === "undefined" || userStr === "null") {
+        console.log("No valid user in localStorage");
         return {};
       }
-      return JSON.parse(userStr);
+      const parsed = JSON.parse(userStr);
+      console.log("Parsed user:", parsed);
+      console.log("Is admin?", parsed?.is_admin);
+      return parsed;
     } catch (error) {
       console.error("Error parsing user from localStorage:", error);
       return {};
@@ -26,6 +31,7 @@ const Layout = ({ setAuth }) => {
   
   const user = getUserFromStorage();
   const isAdmin = user?.is_admin || false;
+  console.log("Final isAdmin value:", isAdmin);
 
   const handleLogout = () => {
     localStorage.removeItem("token");
