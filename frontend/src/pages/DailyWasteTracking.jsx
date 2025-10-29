@@ -1,50 +1,66 @@
 import { useEffect, useState } from "react";
 import axios from "axios";
-import { toast } from "sonner";
-import { Trash2, TrendingDown, Calendar, AlertCircle } from "lucide-react";
-import { Card, CardContent, CardHeader, CardTitle } from "../components/ui/card";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "../components/ui/dialog";
-import { Button } from "../components/ui/button";
+import { API } from "../App";
 
 const DailyWasteTracking = () => {
+  const [trackings, setTrackings] = useState([]);
   const [categories, setCategories] = useState([]);
-  const [wasteRecords, setWasteRecords] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [dialogOpen, setDialogOpen] = useState(false);
+  const [showAddDialog, setShowAddDialog] = useState(false);
+  const [editingTracking, setEditingTracking] = useState(null);
+  const [selectedCategory, setSelectedCategory] = useState("all");
+  const [isAdmin, setIsAdmin] = useState(false);
   const [formData, setFormData] = useState({
     main_category_id: "",
     waste_kg: "",
+    tracking_date: new Date().toISOString().split("T")[0],
     notes: "",
   });
 
-  const API_URL = process.env.REACT_APP_BACKEND_URL || "http://localhost:8001";
-
   useEffect(() => {
     fetchCategories();
-    fetchWasteRecords();
+    checkAdminStatus();
   }, []);
+
+  useEffect(() => {
+    if (categories.length > 0) {
+      fetchTrackings();
+    }
+  }, [selectedCategory, categories]);
+
+  const checkAdminStatus = () => {
+    const userStr = localStorage.getItem("user");
+    if (userStr) {
+      const user = JSON.parse(userStr);
+      setIsAdmin(user.is_admin || false);
+    }
+  };
 
   const fetchCategories = async () => {
     try {
       const token = localStorage.getItem("token");
-      const response = await axios.get(`${API_URL}/api/main-categories`, {
+      const response = await axios.get(`${API}/main-categories`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       setCategories(response.data);
     } catch (error) {
-      toast.error("Failed to fetch categories");
+      console.error("Failed to fetch categories", error);
     }
   };
 
-  const fetchWasteRecords = async () => {
+  const fetchTrackings = async () => {
     try {
       const token = localStorage.getItem("token");
-      const response = await axios.get(`${API_URL}/api/daily-waste-tracking`, {
+      const url =
+        selectedCategory === "all"
+          ? `${API}/daily-waste-tracking`
+          : `${API}/daily-waste-tracking?main_category_id=${selectedCategory}`;
+      const response = await axios.get(url, {
         headers: { Authorization: `Bearer ${token}` },
       });
-      setWasteRecords(response.data);
+      setTrackings(response.data);
     } catch (error) {
-      toast.error("Failed to fetch waste records");
+      console.error("Failed to fetch trackings", error);
     } finally {
       setLoading(false);
     }
@@ -52,31 +68,64 @@ const DailyWasteTracking = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    
-    // Validation
-    const wasteKg = parseFloat(formData.waste_kg);
-    
-    if (wasteKg <= 0) {
-      toast.error("Waste weight must be greater than 0");
-      return;
-    }
-
     try {
       const token = localStorage.getItem("token");
       const data = {
-        ...formData,
-        waste_kg: wasteKg,
+        main_category_id: formData.main_category_id,
+        waste_kg: parseFloat(formData.waste_kg),
+        tracking_date: formData.tracking_date,
+        notes: formData.notes,
       };
 
-      await axios.post(`${API_URL}/api/daily-waste-tracking`, data, {
+      await axios.post(`${API}/daily-waste-tracking`, data, {
         headers: { Authorization: `Bearer ${token}` },
       });
-      
-      toast.success("Waste record saved successfully!");
-      fetchWasteRecords();
+      alert("Waste tracking recorded successfully");
+      fetchTrackings();
       resetForm();
     } catch (error) {
-      toast.error(error.response?.data?.detail || "Failed to save waste record");
+      alert(error.response?.data?.detail || "Failed to record tracking");
+    }
+  };
+
+  const handleEdit = (tracking) => {
+    setEditingTracking({
+      id: tracking.id,
+      main_category_id: tracking.main_category_id,
+      waste_kg: tracking.waste_kg,
+      tracking_date: tracking.tracking_date,
+      notes: tracking.notes || "",
+    });
+  };
+
+  const handleSaveEdit = async () => {
+    try {
+      const token = localStorage.getItem("token");
+      await axios.put(
+        `${API}/daily-waste-tracking/${editingTracking.id}`,
+        editingTracking,
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      setEditingTracking(null);
+      fetchTrackings();
+      alert("Waste tracking updated successfully");
+    } catch (error) {
+      alert(error.response?.data?.detail || "Failed to update tracking");
+    }
+  };
+
+  const handleDelete = async (trackingId) => {
+    if (!window.confirm("Are you sure? This will adjust inventory calculations.")) return;
+    
+    try {
+      const token = localStorage.getItem("token");
+      await axios.delete(`${API}/daily-waste-tracking/${trackingId}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      fetchTrackings();
+      alert("Waste tracking deleted successfully");
+    } catch (error) {
+      alert(error.response?.data?.detail || "Failed to delete tracking");
     }
   };
 
@@ -84,244 +133,262 @@ const DailyWasteTracking = () => {
     setFormData({
       main_category_id: "",
       waste_kg: "",
+      tracking_date: new Date().toISOString().split("T")[0],
       notes: "",
     });
-    setDialogOpen(false);
+    setShowAddDialog(false);
   };
 
-  const getTodayRecords = () => {
-    const today = new Date().toISOString().split('T')[0];
-    return wasteRecords.filter(record => record.tracking_date === today);
-  };
-
-  const getHistoricalRecords = () => {
-    const today = new Date().toISOString().split('T')[0];
-    return wasteRecords.filter(record => record.tracking_date !== today);
+  const getCategoryName = (categoryId) => {
+    const category = categories.find((c) => c.id === categoryId);
+    return category ? category.name : "Unknown";
   };
 
   if (loading) {
-    return <div className="p-8">Loading waste tracking...</div>;
+    return <div className="flex justify-center items-center h-screen">Loading...</div>;
   }
 
-  const todayRecords = getTodayRecords();
-  const historicalRecords = getHistoricalRecords();
-
   return (
-    <div className="p-8">
+    <div className="p-6">
       <div className="flex justify-between items-center mb-6">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">Daily Waste Tracking</h1>
-          <p className="text-gray-600 mt-1">Record end-of-day processing and waste</p>
+          <h1 className="text-2xl font-bold">Daily Waste Tracking</h1>
+          <p className="text-gray-600">Track end-of-day waste (spoilage, trimming)</p>
         </div>
-        <Button
-          onClick={() => setDialogOpen(true)}
-          className="bg-emerald-600 hover:bg-emerald-700"
+        <button
+          onClick={() => setShowAddDialog(true)}
+          className="bg-emerald-600 text-white px-4 py-2 rounded-lg hover:bg-emerald-700 flex items-center gap-2"
         >
-          <Trash2 className="mr-2 h-4 w-4" />
-          Record Waste Entry
-        </Button>
+          + Add Entry
+        </button>
       </div>
 
-      {/* Today's Records */}
-      {todayRecords.length > 0 && (
-        <div className="mb-8">
-          <h2 className="text-xl font-semibold mb-4 flex items-center gap-2">
-            <Calendar className="h-5 w-5 text-emerald-600" />
-            Today's Waste Records
-          </h2>
-          <div className="space-y-3">
-            {todayRecords.map((record) => (
-              <Card key={record.id} className="bg-emerald-50 border-emerald-200">
-                <CardContent className="pt-4">
-                  <div className="flex justify-between items-start">
-                    <div className="flex-1">
-                      <div className="flex items-center gap-2 mb-2">
-                        <h3 className="text-lg font-semibold text-emerald-900">
-                          {record.main_category_name}
-                        </h3>
-                        <span className="text-xs text-gray-500">
-                          {new Date(record.created_at).toLocaleTimeString('en-IN', { 
-                            hour: '2-digit', 
-                            minute: '2-digit',
-                            hour12: true 
-                          })}
-                        </span>
+      <div className="mb-6">
+        <label className="block text-sm font-medium mb-2">Filter by Category</label>
+        <select
+          value={selectedCategory}
+          onChange={(e) => setSelectedCategory(e.target.value)}
+          className="border rounded-lg px-4 py-2 w-64"
+        >
+          <option value="all">All Categories</option>
+          {categories.map((cat) => (
+            <option key={cat.id} value={cat.id}>
+              {cat.name}
+            </option>
+          ))}
+        </select>
+      </div>
+
+      <div className="bg-white rounded-lg shadow-md">
+        <div className="overflow-x-auto">
+          <table className="w-full">
+            <thead className="bg-gray-50 border-b">
+              <tr>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Date
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Category
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Waste (kg)
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Notes
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Recorded At
+                </th>
+                {isAdmin && (
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Actions
+                  </th>
+                )}
+              </tr>
+            </thead>
+            <tbody className="bg-white divide-y divide-gray-200">
+              {trackings.length === 0 ? (
+                <tr>
+                  <td colSpan={isAdmin ? 6 : 5} className="px-6 py-8 text-center text-gray-500">
+                    No waste tracking entries yet. Add your first entry!
+                  </td>
+                </tr>
+              ) : (
+                trackings.map((tracking) => (
+                  <tr key={tracking.id} className="hover:bg-gray-50">
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="text-sm font-medium text-gray-900">
+                        {new Date(tracking.tracking_date).toLocaleDateString()}
                       </div>
-                      <div className="grid grid-cols-2 gap-4 text-sm">
-                        <div>
-                          <p className="text-gray-600">Waste Amount</p>
-                          <p className="font-semibold text-red-600">{record.waste_kg} kg</p>
-                        </div>
-                        <div>
-                          <p className="text-gray-600">Deducted From</p>
-                          <p className="font-semibold text-gray-900">Inventory Stock</p>
-                        </div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="text-sm text-gray-900">{getCategoryName(tracking.main_category_id)}</div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="text-sm font-bold text-red-600">{tracking.waste_kg} kg</div>
+                    </td>
+                    <td className="px-6 py-4">
+                      <div className="text-sm text-gray-500">{tracking.notes || '-'}</div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="text-sm text-gray-500">
+                        {new Date(tracking.created_at).toLocaleString()}
                       </div>
-                      {record.notes && (
-                        <p className="text-sm text-gray-600 mt-2">
-                          Notes: {record.notes}
-                        </p>
-                      )}
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
+                    </td>
+                    {isAdmin && (
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <div className="flex gap-2">
+                          <button
+                            onClick={() => handleEdit(tracking)}
+                            className="px-3 py-1 bg-blue-500 text-white rounded hover:bg-blue-600 text-sm"
+                          >
+                            Edit
+                          </button>
+                          <button
+                            onClick={() => handleDelete(tracking.id)}
+                            className="px-3 py-1 bg-red-500 text-white rounded hover:bg-red-600 text-sm"
+                          >
+                            Delete
+                          </button>
+                        </div>
+                      </td>
+                    )}
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      {/* Add Dialog */}
+      {showAddDialog && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
+            <h3 className="text-xl font-bold mb-4">Add Waste Tracking</h3>
+            <form onSubmit={handleSubmit} className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium mb-2">Category *</label>
+                <select
+                  required
+                  value={formData.main_category_id}
+                  onChange={(e) => setFormData({ ...formData, main_category_id: e.target.value })}
+                  className="w-full border rounded-lg px-3 py-2"
+                >
+                  <option value="">Select Category</option>
+                  {categories.map((cat) => (
+                    <option key={cat.id} value={cat.id}>
+                      {cat.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-2">Waste Weight (kg) *</label>
+                <input
+                  type="number"
+                  required
+                  step="0.01"
+                  min="0.01"
+                  value={formData.waste_kg}
+                  onChange={(e) => setFormData({ ...formData, waste_kg: e.target.value })}
+                  className="w-full border rounded-lg px-3 py-2"
+                  placeholder="Enter waste in kg"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-2">Tracking Date *</label>
+                <input
+                  type="date"
+                  required
+                  value={formData.tracking_date}
+                  onChange={(e) => setFormData({ ...formData, tracking_date: e.target.value })}
+                  className="w-full border rounded-lg px-3 py-2"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-2">Notes</label>
+                <textarea
+                  value={formData.notes}
+                  onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
+                  className="w-full border rounded-lg px-3 py-2"
+                  rows={3}
+                  placeholder="Optional notes"
+                />
+              </div>
+              <div className="flex gap-2 justify-end">
+                <button
+                  type="button"
+                  onClick={resetForm}
+                  className="px-4 py-2 border rounded-lg hover:bg-gray-50"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="px-4 py-2 bg-emerald-500 text-white rounded-lg hover:bg-emerald-600"
+                >
+                  Save
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}
 
-      {/* Historical Records */}
-      <div>
-        <h2 className="text-xl font-semibold mb-4 flex items-center gap-2">
-          <TrendingDown className="h-5 w-5 text-gray-600" />
-          Historical Waste Records
-        </h2>
-        
-        {historicalRecords.length === 0 ? (
-          <Card>
-            <CardContent className="py-12 text-center">
-              <Trash2 className="mx-auto h-12 w-12 text-gray-400 mb-3" />
-              <p className="text-lg text-gray-600">No historical waste records</p>
-              <p className="text-sm text-gray-500 mt-1">
-                Start tracking daily waste to see historical data
-              </p>
-            </CardContent>
-          </Card>
-        ) : (
-          <div className="space-y-3">
-            {historicalRecords.map((record) => (
-              <Card key={record.id} className="hover:shadow-md transition-shadow">
-                <CardContent className="pt-4">
-                  <div className="flex justify-between items-start">
-                    <div className="flex-1">
-                      <div className="flex items-center gap-3 mb-2">
-                        <h3 className="text-lg font-semibold text-gray-900">
-                          {record.main_category_name}
-                        </h3>
-                        <span className="text-sm text-gray-500">
-                          {new Date(record.tracking_date).toLocaleDateString('en-IN', {
-                            day: 'numeric',
-                            month: 'short',
-                            year: 'numeric'
-                          })}
-                        </span>
-                      </div>
-                      <div className="grid grid-cols-2 gap-4 text-sm">
-                        <div>
-                          <p className="text-gray-600">Waste Amount</p>
-                          <p className="font-semibold text-red-600">{record.waste_kg} kg</p>
-                        </div>
-                        <div>
-                          <p className="text-gray-600">Deducted From</p>
-                          <p className="font-semibold text-gray-900">Inventory Stock</p>
-                        </div>
-                      </div>
-                      {record.notes && (
-                        <p className="text-sm text-gray-600 mt-2">
-                          Notes: {record.notes}
-                        </p>
-                      )}
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-        )}
-      </div>
-
-      {/* Dialog for adding waste record */}
-      <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-        <DialogContent className="max-w-2xl">
-          <DialogHeader>
-            <DialogTitle>Record Waste Entry</DialogTitle>
-          </DialogHeader>
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div>
-              <label className="block text-sm font-medium mb-2">
-                Main Category *
-              </label>
-              <select
-                required
-                value={formData.main_category_id}
-                onChange={(e) =>
-                  setFormData({ ...formData, main_category_id: e.target.value })
-                }
-                className="w-full border rounded-lg px-3 py-2"
-              >
-                <option value="">Select Category</option>
-                {categories.map((cat) => (
-                  <option key={cat.id} value={cat.id}>
-                    {cat.name}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium mb-2">
-                Waste Amount (kg) *
-              </label>
-              <input
-                type="number"
-                step="0.01"
-                required
-                value={formData.waste_kg}
-                onChange={(e) =>
-                  setFormData({ ...formData, waste_kg: e.target.value })
-                }
-                className="w-full border rounded-lg px-3 py-2"
-                placeholder="e.g., 15.00"
-              />
-              <p className="text-xs text-gray-500 mt-1">
-                Total waste in kg to be deducted from inventory
-              </p>
-            </div>
-
-            <div className="bg-blue-50 border border-blue-200 p-4 rounded-lg">
-              <div className="flex items-start gap-2">
-                <AlertCircle className="h-5 w-5 text-blue-600 mt-0.5" />
-                <div className="flex-1">
-                  <p className="font-semibold text-blue-900 mb-1">
-                    ℹ️ Note
-                  </p>
-                  <p className="text-sm text-blue-800">
-                    This waste amount will be directly deducted from your inventory stock using FIFO (First In, First Out) method.
-                  </p>
-                </div>
+      {/* Edit Dialog */}
+      {editingTracking && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
+            <h3 className="text-xl font-bold mb-4">Edit Waste Tracking</h3>
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium mb-2">Waste Weight (kg) *</label>
+                <input
+                  type="number"
+                  step="0.01"
+                  min="0.01"
+                  value={editingTracking.waste_kg}
+                  onChange={(e) => setEditingTracking({ ...editingTracking, waste_kg: parseFloat(e.target.value) })}
+                  className="w-full border rounded-lg px-3 py-2"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-2">Tracking Date *</label>
+                <input
+                  type="date"
+                  value={editingTracking.tracking_date}
+                  onChange={(e) => setEditingTracking({ ...editingTracking, tracking_date: e.target.value })}
+                  className="w-full border rounded-lg px-3 py-2"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-2">Notes</label>
+                <textarea
+                  value={editingTracking.notes}
+                  onChange={(e) => setEditingTracking({ ...editingTracking, notes: e.target.value })}
+                  className="w-full border rounded-lg px-3 py-2"
+                  rows={3}
+                />
+              </div>
+              <div className="flex gap-2 justify-end">
+                <button
+                  onClick={() => setEditingTracking(null)}
+                  className="px-4 py-2 border rounded-lg hover:bg-gray-50"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleSaveEdit}
+                  className="px-4 py-2 bg-emerald-500 text-white rounded-lg hover:bg-emerald-600"
+                >
+                  Save Changes
+                </button>
               </div>
             </div>
-
-            <div>
-              <label className="block text-sm font-medium mb-2">
-                Notes (Optional)
-              </label>
-              <textarea
-                value={formData.notes}
-                onChange={(e) =>
-                  setFormData({ ...formData, notes: e.target.value })
-                }
-                className="w-full border rounded-lg px-3 py-2"
-                rows="3"
-                placeholder="Optional notes about this waste entry..."
-              />
-            </div>
-
-            <div className="flex gap-2 justify-end">
-              <Button type="button" variant="outline" onClick={resetForm}>
-                Cancel
-              </Button>
-              <Button
-                type="submit"
-                className="bg-emerald-600 hover:bg-emerald-700"
-              >
-                Submit Waste Record
-              </Button>
-            </div>
-          </form>
-        </DialogContent>
-      </Dialog>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
