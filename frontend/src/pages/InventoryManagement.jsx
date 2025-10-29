@@ -213,25 +213,25 @@ const InventoryManagement = () => {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
           {categories.map((cat) => (
             <div
-              key={cat.id}
+              key={cat.main_category_id}
               className="bg-white rounded-lg shadow-md p-6 border-l-4 border-emerald-500"
             >
               <div className="flex items-center justify-between mb-4">
                 <h3 className="text-xl font-semibold flex items-center gap-2">
-                  <span className="text-3xl">{getCategoryIcon(cat.name)}</span>
-                  {cat.name}
+                  <span className="text-3xl">{getCategoryIcon(cat.main_category_name)}</span>
+                  {cat.main_category_name}
                 </h3>
               </div>
               <div className="space-y-3">
                 <div>
                   <p className="text-sm text-gray-600">Current Stock</p>
                   <p className="text-2xl font-bold text-emerald-600">
-                    {cat.remaining_weight_kg || 0} kg
+                    {cat.total_weight_kg || 0} kg
                   </p>
                 </div>
                 <div>
                   <p className="text-sm text-gray-600">Total Pieces</p>
-                  <p className="text-xl font-semibold">{cat.remaining_pieces || 0}</p>
+                  <p className="text-xl font-semibold">{cat.total_pieces || 0}</p>
                 </div>
                 <button
                   onClick={() => handleViewDetails(cat)}
