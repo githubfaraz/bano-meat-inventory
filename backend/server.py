@@ -1881,6 +1881,18 @@ async def get_daily_waste_tracking(
         query["tracking_date"] = {"$gte": start_date}
     
     tracking = await db.daily_waste_tracking.find(query, {"_id": 0}).sort("tracking_date", -1).to_list(length=None)
+    
+    # Handle backwards compatibility - convert old field names to new format
+    for record in tracking:
+        if 'waste_kg' not in record:
+            # Old format had waste_weight_kg
+            record['waste_kg'] = record.get('waste_weight_kg', 0)
+        # Remove old fields if they exist
+        record.pop('waste_weight_kg', None)
+        record.pop('raw_weight_kg', None)
+        record.pop('dressed_weight_kg', None)
+        record.pop('waste_percentage', None)
+    
     return tracking
 
 @api_router.post("/daily-waste-tracking", response_model=DailyWasteTracking)
