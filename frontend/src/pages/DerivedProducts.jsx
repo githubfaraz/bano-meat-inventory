@@ -326,10 +326,15 @@ const DerivedProducts = () => {
               >
                 <option value="weight">Weight (kg) - Sold by exact weight</option>
                 <option value="package">Package - Sold by fixed package</option>
+                {getSaleUnitOptions() && (
+                  <option value="pieces">Pieces - Sold by count</option>
+                )}
               </select>
               <p className="text-xs text-gray-500 mt-1">
                 {formData.sale_unit === "weight" 
                   ? "For fresh items sold by weight (e.g., Boneless Chicken)"
+                  : formData.sale_unit === "pieces"
+                  ? "For items sold by count (e.g., 1 piece = 1 unit)"
                   : "For pre-packaged items (e.g., Frozen Nuggets 500g)"}
               </p>
             </div>
