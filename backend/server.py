@@ -1593,21 +1593,27 @@ async def update_inventory_purchase(
     # Update purchase
     total_cost = update_data.total_weight_kg * update_data.cost_per_kg
     
+    update_dict = {
+        "main_category_id": update_data.main_category_id,
+        "main_category_name": category["name"],
+        "vendor_id": update_data.vendor_id,
+        "vendor_name": vendor["name"],
+        "total_weight_kg": new_total_weight,
+        "total_pieces": new_total_pieces,
+        "remaining_weight_kg": round(new_remaining_weight, 2),
+        "remaining_pieces": new_remaining_pieces,
+        "cost_per_kg": update_data.cost_per_kg,
+        "total_cost": round(total_cost, 2),
+        "notes": update_data.notes
+    }
+    
+    # Add purchase_date if provided
+    if update_data.purchase_date:
+        update_dict["purchase_date"] = update_data.purchase_date
+    
     await db.inventory_purchases.update_one(
         {"id": purchase_id},
-        {"$set": {
-            "main_category_id": update_data.main_category_id,
-            "main_category_name": category["name"],
-            "vendor_id": update_data.vendor_id,
-            "vendor_name": vendor["name"],
-            "total_weight_kg": new_total_weight,
-            "total_pieces": new_total_pieces,
-            "remaining_weight_kg": round(new_remaining_weight, 2),
-            "remaining_pieces": new_remaining_pieces,
-            "cost_per_kg": update_data.cost_per_kg,
-            "total_cost": round(total_cost, 2),
-            "notes": update_data.notes
-        }}
+        {"$set": update_dict}
     )
     
     updated_purchase = await db.inventory_purchases.find_one({"id": purchase_id}, {"_id": 0})
