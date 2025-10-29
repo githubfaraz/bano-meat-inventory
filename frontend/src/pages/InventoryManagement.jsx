@@ -185,7 +185,7 @@ const InventoryManagement = () => {
       await axios.post(`${API}/inventory-purchases`, {
         main_category_id: addPurchaseForm.main_category_id,
         vendor_id: addPurchaseForm.vendor_id,
-        raw_weight_kg: parseFloat(addPurchaseForm.raw_weight_kg),
+        total_weight_kg: parseFloat(addPurchaseForm.raw_weight_kg),  // Backend expects total_weight_kg
         total_pieces: parseInt(addPurchaseForm.total_pieces) || 0,
         cost_per_kg: parseFloat(addPurchaseForm.cost_per_kg),
         purchase_date: addPurchaseForm.purchase_date,
@@ -206,7 +206,12 @@ const InventoryManagement = () => {
       fetchCategories();
       alert("Purchase added successfully");
     } catch (error) {
-      alert(error.response?.data?.detail || "Failed to add purchase");
+      console.error("Add purchase error:", error);
+      const errorMessage = error.response?.data?.detail 
+        || error.response?.data?.message 
+        || error.message 
+        || "Failed to add purchase";
+      alert(errorMessage);
     }
   };
 
