@@ -41,7 +41,7 @@ const InventoryManagement = () => {
   const fetchCategories = async () => {
     try {
       const token = localStorage.getItem("token");
-      const response = await axios.get(`${API}/main-categories`, {
+      const response = await axios.get(`${API}/inventory-summary`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       setCategories(response.data);
@@ -49,6 +49,18 @@ const InventoryManagement = () => {
     } catch (error) {
       console.error("Error fetching categories:", error);
       setLoading(false);
+    }
+  };
+
+  const fetchVendors = async () => {
+    try {
+      const token = localStorage.getItem("token");
+      const response = await axios.get(`${API}/vendors`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      setVendors(response.data);
+    } catch (error) {
+      console.error("Error fetching vendors:", error);
     }
   };
 
