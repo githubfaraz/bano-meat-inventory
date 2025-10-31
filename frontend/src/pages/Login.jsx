@@ -19,19 +19,26 @@ const Login = ({ setAuth }) => {
     setLoading(true);
 
     try {
+      console.log("🔐 Attempting login to:", `${API}/auth/login`);
       const response = await axios.post(`${API}/auth/login`, {
         username,
         password,
       });
 
+      console.log("✅ Login response received:", response.data);
       localStorage.setItem("token", response.data.access_token);
       localStorage.setItem("user", JSON.stringify(response.data.user));
       toast.success("Login successful!");
       setAuth(true);
       navigate("/");
     } catch (error) {
-      toast.error(error.response?.data?.detail || "Login failed");
+      console.error("❌ Login error:", error);
+      console.error("Error response:", error.response);
+      console.error("Error message:", error.message);
+      const errorMsg = error.response?.data?.detail || error.message || "Login failed";
+      toast.error(errorMsg);
     } finally {
+      console.log("🏁 Login attempt finished");
       setLoading(false);
     }
   };
