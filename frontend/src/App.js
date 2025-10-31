@@ -22,8 +22,10 @@ import NewPOS from "@/pages/NewPOS";
 import Layout from "@/components/Layout";
 import { Toaster } from "@/components/ui/sonner";
 
-const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
+const BACKEND_URL = process.env.REACT_APP_BACKEND_URL || "https://bano-fresh-meat.preview.emergentagent.com";
 export const API = `${BACKEND_URL}/api`;
+console.log("🔧 App.js - BACKEND_URL:", BACKEND_URL);
+console.log("🔧 App.js - API:", API);
 
 // Axios interceptor for auth
 axios.interceptors.request.use(
