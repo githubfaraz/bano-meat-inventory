@@ -24,10 +24,16 @@ const Login = ({ setAuth }) => {
 
     try {
       console.log("🔐 Attempting login to:", `${API}/auth/login`);
-      const response = await axios.post(`${API}/auth/login`, {
-        username,
-        password,
-      });
+      const response = await axios.post(
+        `${API}/auth/login`,
+        {
+          username,
+          password,
+        },
+        {
+          timeout: 10000, // 10 second timeout
+        }
+      );
 
       console.log("✅ Login response received:", response.data);
       localStorage.setItem("token", response.data.access_token);
@@ -39,7 +45,18 @@ const Login = ({ setAuth }) => {
       console.error("❌ Login error:", error);
       console.error("Error response:", error.response);
       console.error("Error message:", error.message);
-      const errorMsg = error.response?.data?.detail || error.message || "Login failed";
+      
+      let errorMsg = "Login failed";
+      if (error.code === "ECONNABORTED") {
+        errorMsg = "Connection timeout - Please check your network";
+      } else if (error.response) {
+        errorMsg = error.response.data?.detail || `Error: ${error.response.status}`;
+      } else if (error.request) {
+        errorMsg = "No response from server - Please check backend URL";
+      } else {
+        errorMsg = error.message;
+      }
+      
       toast.error(errorMsg);
     } finally {
       console.log("🏁 Login attempt finished");
