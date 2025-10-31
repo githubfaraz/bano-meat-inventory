@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
 import { API } from "@/App";
@@ -13,6 +13,10 @@ const Login = ({ setAuth }) => {
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
+
+  useEffect(() => {
+    console.log("🔧 API URL configured as:", API);
+  }, []);
 
   const handleLogin = async (e) => {
     e.preventDefault();
