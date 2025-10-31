@@ -215,6 +215,26 @@ const InventoryManagement = () => {
     }
   };
 
+  const handleEditSale = (sale) => {
+    alert("Sale editing is not yet implemented. Sales are complex records with multiple items and inventory adjustments.");
+  };
+
+  const handleDeleteSale = async (saleId) => {
+    if (!window.confirm("Are you sure you want to delete this sale? This cannot be undone and will affect inventory calculations.")) return;
+    
+    try {
+      const token = localStorage.getItem("token");
+      await axios.delete(`${API}/pos-sales/${saleId}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      fetchDetailData(selectedCategory.id);
+      fetchCategories();
+      alert("Sale deleted successfully");
+    } catch (error) {
+      alert(error.response?.data?.detail || "Failed to delete sale");
+    }
+  };
+
   const getCategoryIcon = (categoryName) => {
     if (!categoryName) return '📦';
     const name = categoryName.toLowerCase();
