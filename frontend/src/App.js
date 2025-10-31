@@ -12,11 +12,20 @@ import POS from "@/pages/POS";
 import Sales from "@/pages/Sales";
 import Reports from "@/pages/Reports";
 import Users from "@/pages/Users";
+// New Inventory System Components
+import MainCategories from "@/pages/MainCategories";
+import DerivedProducts from "@/pages/DerivedProducts";
+import InventoryManagement from "@/pages/InventoryManagement";
+import DailyPiecesTracking from "@/pages/DailyPiecesTracking";
+import DailyWasteTracking from "@/pages/DailyWasteTracking";
+import NewPOS from "@/pages/NewPOS";
 import Layout from "@/components/Layout";
 import { Toaster } from "@/components/ui/sonner";
 
-const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
+const BACKEND_URL = process.env.REACT_APP_BACKEND_URL || "https://bano-fresh-meat.preview.emergentagent.com";
 export const API = `${BACKEND_URL}/api`;
+console.log("🔧 App.js - BACKEND_URL:", BACKEND_URL);
+console.log("🔧 App.js - API:", API);
 
 // Axios interceptor for auth
 axios.interceptors.request.use(
@@ -70,6 +79,13 @@ function App() {
             <Route path="sales" element={<Sales />} />
             <Route path="reports" element={<Reports />} />
             <Route path="users" element={<Users />} />
+            {/* New Inventory System Routes */}
+            <Route path="main-categories" element={<MainCategories />} />
+            <Route path="derived-products" element={<DerivedProducts />} />
+            <Route path="inventory-management" element={<InventoryManagement />} />
+            <Route path="daily-pieces-tracking" element={<DailyPiecesTracking />} />
+            <Route path="daily-waste-tracking" element={<DailyWasteTracking />} />
+            <Route path="new-pos" element={<NewPOS />} />
           </Route>
         </Routes>
       </BrowserRouter>
