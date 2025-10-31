@@ -497,12 +497,12 @@ const InventoryManagement = () => {
                       <div className="flex-1 grid grid-cols-2 md:grid-cols-4 gap-4">
                         <div>
                           <p className="text-sm text-gray-600">Vendor: {purchase.vendor_name || 'Unknown'}</p>
-                          <p className="text-sm font-medium">Total Weight</p>
-                          <p className="text-lg font-bold text-emerald-600">{purchase.raw_weight_kg} kg</p>
+                          <p className="text-sm font-medium mt-2">Total Weight</p>
+                          <p className="text-lg font-bold text-emerald-600">{purchase.raw_weight_kg || 0} kg</p>
                         </div>
                         <div>
                           <p className="text-sm font-medium">Remaining</p>
-                          <p className="text-lg font-bold text-blue-600">{purchase.remaining_weight_kg} kg</p>
+                          <p className="text-lg font-bold text-blue-600">{purchase.remaining_weight_kg || 0} kg</p>
                         </div>
                         <div>
                           <p className="text-sm font-medium">Total Pieces</p>
@@ -514,22 +514,24 @@ const InventoryManagement = () => {
                         </div>
                         <div>
                           <p className="text-sm font-medium">Cost/kg</p>
-                          <p className="text-lg font-bold">₹{purchase.cost_per_kg}</p>
+                          <p className="text-lg font-bold">₹{purchase.cost_per_kg || 0}</p>
                         </div>
                         <div>
                           <p className="text-sm font-medium">Total Cost</p>
-                          <p className="text-lg font-bold text-orange-600">₹{purchase.total_cost}</p>
+                          <p className="text-lg font-bold text-orange-600">₹{purchase.total_cost || 0}</p>
                         </div>
-                        <div className="col-span-2">
+                        <div>
+                          <p className="text-sm font-medium">Purchase Date</p>
+                          <p className="text-sm text-gray-600">{new Date(purchase.purchase_date).toLocaleDateString()}</p>
+                          <p className="text-xs text-gray-400">{new Date(purchase.purchase_date).toLocaleTimeString()}</p>
+                        </div>
+                        <div>
                           <p className="text-sm text-gray-500">Notes: {purchase.notes || '...'}</p>
                         </div>
                       </div>
-                      <div className="text-right">
-                        <p className="text-sm font-medium">Purchase Date</p>
-                        <p className="text-sm text-gray-600">{new Date(purchase.purchase_date).toLocaleDateString()}</p>
-                        <p className="text-xs text-gray-400">{new Date(purchase.purchase_date).toLocaleTimeString()}</p>
+                      <div className="text-right ml-4">
                         {isAdmin && (
-                          <div className="flex gap-2 mt-2">
+                          <div className="flex gap-2">
                             <button
                               onClick={() => handleEditPurchase(purchase)}
                               className="px-3 py-1 bg-blue-500 text-white rounded hover:bg-blue-600 text-sm"
@@ -595,12 +597,12 @@ const InventoryManagement = () => {
                         <div className="mt-2">
                           {sale.items?.map((item, idx) => (
                             <div key={idx} className="text-sm">
-                              <span className="font-medium">{item.product_name || 'Unknown Product'}</span>
+                              <span className="font-medium">{item.derived_product_name || 'Unknown Product'}</span>
                               <span className="text-gray-600 ml-2">
-                                {item.weight_kg 
-                                  ? `${item.weight_kg}kg × ₹${item.price_per_kg || 0}/kg` 
-                                  : item.quantity 
-                                    ? `${item.quantity || 0}pcs × ₹${item.price || 0}/pc`
+                                {item.quantity_kg > 0
+                                  ? `${item.quantity_kg}kg × ₹${item.selling_price}/kg` 
+                                  : item.quantity_pieces 
+                                    ? `${item.quantity_pieces}pcs × ₹${item.selling_price}/pc`
                                     : 'N/A'}
                               </span>
                             </div>
@@ -608,7 +610,7 @@ const InventoryManagement = () => {
                         </div>
                       </div>
                       <div className="text-right">
-                        <p className="text-2xl font-bold text-emerald-600">₹{sale.final_amount}</p>
+                        <p className="text-2xl font-bold text-emerald-600">₹{sale.total}</p>
                         <p className="text-sm text-gray-600">{new Date(sale.created_at).toLocaleDateString()}</p>
                         <p className="text-xs text-gray-400">{new Date(sale.created_at).toLocaleTimeString()}</p>
                       </div>

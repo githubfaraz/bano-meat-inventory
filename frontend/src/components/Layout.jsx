@@ -42,20 +42,21 @@ const Layout = ({ setAuth }) => {
   };
 
   const navItems = [
-    { path: "/", icon: LayoutDashboard, label: "Dashboard" },
+    // Dashboard
+    { path: "/", icon: LayoutDashboard, label: "Dashboard", section: "dashboard" },
     // Inventory System
-    { path: "/main-categories", icon: List, label: "Main Categories", section: "new", adminOnly: true },
-    { path: "/derived-products", icon: Box, label: "Derived Products", section: "new", adminOnly: true },
-    { path: "/inventory-management", icon: Warehouse, label: "Inventory", section: "new" },
-    { path: "/daily-pieces-tracking", icon: PieChart, label: "Daily Pieces", section: "new" },
-    { path: "/daily-waste-tracking", icon: Trash2, label: "Daily Waste", section: "new" },
-    { path: "/new-pos", icon: ShoppingCart, label: "New POS", section: "new" },
+    { path: "/main-categories", icon: List, label: "Main Categories", section: "inventory", adminOnly: true },
+    { path: "/derived-products", icon: Box, label: "Derived Products", section: "inventory", adminOnly: true },
+    { path: "/inventory-management", icon: Warehouse, label: "Inventory", section: "inventory" },
+    { path: "/daily-pieces-tracking", icon: PieChart, label: "Daily Pieces", section: "inventory" },
+    { path: "/daily-waste-tracking", icon: Trash2, label: "Daily Waste", section: "inventory" },
+    { path: "/new-pos", icon: ShoppingCart, label: "New POS", section: "inventory" },
     // General
-    { path: "/sales", icon: TrendingUp, label: "Sales", section: "common" },
-    { path: "/vendors", icon: Store, label: "Vendors", section: "common" },
-    { path: "/customers", icon: Users, label: "Customers", section: "common" },
-    { path: "/reports", icon: FileText, label: "Reports", section: "common" },
-    { path: "/users", icon: UserCog, label: "Users", adminOnly: true, section: "common" },
+    { path: "/sales", icon: TrendingUp, label: "Sales", section: "general" },
+    { path: "/vendors", icon: Store, label: "Vendors", section: "general" },
+    { path: "/customers", icon: Users, label: "Customers", section: "general" },
+    { path: "/reports", icon: FileText, label: "Reports", section: "general" },
+    { path: "/users", icon: UserCog, label: "Users", adminOnly: true, section: "general" },
   ];
 
   return (
@@ -76,13 +77,36 @@ const Layout = ({ setAuth }) => {
         </div>
 
         <nav className="flex-1 p-4 space-y-2 overflow-y-auto">
-          {/* New Inventory System */}
+          {/* Dashboard */}
+          {navItems
+            .filter((item) => item.section === "dashboard")
+            .map((item) => {
+              const Icon = item.icon;
+              const isActive = location.pathname === item.path;
+              return (
+                <Link
+                  key={item.path}
+                  to={item.path}
+                  className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-colors mb-4 ${
+                    isActive
+                      ? "bg-emerald-50 text-emerald-600 font-semibold"
+                      : "text-gray-700 hover:bg-gray-100"
+                  }`}
+                  data-testid={`nav-${item.label.toLowerCase()}`}
+                >
+                  <Icon className="h-5 w-5" />
+                  {item.label}
+                </Link>
+              );
+            })}
+
+          {/* Inventory System */}
           <div className="mb-4">
             <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2 px-4">
               Inventory System
             </p>
             {navItems
-              .filter((item) => item.section === "new" && (!item.adminOnly || isAdmin))
+              .filter((item) => item.section === "inventory" && (!item.adminOnly || isAdmin))
               .map((item) => {
                 const Icon = item.icon;
                 const isActive = location.pathname === item.path;
@@ -104,13 +128,13 @@ const Layout = ({ setAuth }) => {
               })}
           </div>
 
-          {/* Common/General */}
+          {/* General */}
           <div className="mb-4">
             <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2 px-4">
               General
             </p>
             {navItems
-              .filter((item) => item.section === "common" && (!item.adminOnly || isAdmin))
+              .filter((item) => item.section === "general" && (!item.adminOnly || isAdmin))
               .map((item) => {
                 const Icon = item.icon;
                 const isActive = location.pathname === item.path;
