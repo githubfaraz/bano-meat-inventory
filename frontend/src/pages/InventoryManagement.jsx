@@ -498,7 +498,7 @@ const InventoryManagement = () => {
                         <div>
                           <p className="text-sm text-gray-600">Vendor: {purchase.vendor_name || 'Unknown'}</p>
                           <p className="text-sm font-medium mt-2">Total Weight</p>
-                          <p className="text-lg font-bold text-emerald-600">{purchase.raw_weight_kg || 0} kg</p>
+                          <p className="text-lg font-bold text-emerald-600">{purchase.total_weight_kg || 0} kg</p>
                         </div>
                         <div>
                           <p className="text-sm font-medium">Remaining</p>
