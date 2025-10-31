@@ -2166,6 +2166,7 @@ async def create_pos_sale(sale: POSSaleCreateNew, current_user: User = Depends(g
 async def get_pos_sales(
     start_date: Optional[str] = None,
     end_date: Optional[str] = None,
+    main_category_id: Optional[str] = None,
     current_user: User = Depends(get_current_user)
 ):
     query = {}
@@ -2176,6 +2177,20 @@ async def get_pos_sales(
         }
     
     sales = await db.pos_sales.find(query, {"_id": 0}).sort("sale_date", -1).to_list(length=None)
+    
+    # Filter by main_category_id if provided
+    if main_category_id:
+        filtered_sales = []
+        for sale in sales:
+            # Check if any item in the sale matches the category
+            has_category = any(
+                item.get("main_category_id") == main_category_id 
+                for item in sale.get("items", [])
+            )
+            if has_category:
+                filtered_sales.append(sale)
+        return filtered_sales
+    
     return sales
 
 
