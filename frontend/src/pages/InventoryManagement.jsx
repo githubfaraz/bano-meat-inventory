@@ -215,6 +215,26 @@ const InventoryManagement = () => {
     }
   };
 
+  const handleEditSale = (sale) => {
+    alert("Sale editing is not yet implemented. Sales are complex records with multiple items and inventory adjustments.");
+  };
+
+  const handleDeleteSale = async (saleId) => {
+    if (!window.confirm("Are you sure you want to delete this sale? This cannot be undone and will affect inventory calculations.")) return;
+    
+    try {
+      const token = localStorage.getItem("token");
+      await axios.delete(`${API}/pos-sales/${saleId}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      fetchDetailData(selectedCategory.id);
+      fetchCategories();
+      alert("Sale deleted successfully");
+    } catch (error) {
+      alert(error.response?.data?.detail || "Failed to delete sale");
+    }
+  };
+
   const getCategoryIcon = (categoryName) => {
     if (!categoryName) return '📦';
     const name = categoryName.toLowerCase();
@@ -498,7 +518,7 @@ const InventoryManagement = () => {
                         <div>
                           <p className="text-sm text-gray-600">Vendor: {purchase.vendor_name || 'Unknown'}</p>
                           <p className="text-sm font-medium mt-2">Total Weight</p>
-                          <p className="text-lg font-bold text-emerald-600">{purchase.raw_weight_kg || 0} kg</p>
+                          <p className="text-lg font-bold text-emerald-600">{purchase.total_weight_kg || 0} kg</p>
                         </div>
                         <div>
                           <p className="text-sm font-medium">Remaining</p>
@@ -613,6 +633,22 @@ const InventoryManagement = () => {
                         <p className="text-2xl font-bold text-emerald-600">₹{sale.total}</p>
                         <p className="text-sm text-gray-600">{new Date(sale.created_at).toLocaleDateString()}</p>
                         <p className="text-xs text-gray-400">{new Date(sale.created_at).toLocaleTimeString()}</p>
+                        {isAdmin && (
+                          <div className="flex gap-2 mt-2 justify-end">
+                            <button
+                              onClick={() => handleEditSale(sale)}
+                              className="px-3 py-1 bg-blue-500 text-white rounded hover:bg-blue-600 text-sm"
+                            >
+                              Edit
+                            </button>
+                            <button
+                              onClick={() => handleDeleteSale(sale.id)}
+                              className="px-3 py-1 bg-red-500 text-white rounded hover:bg-red-600 text-sm"
+                            >
+                              Delete
+                            </button>
+                          </div>
+                        )}
                       </div>
                     </div>
                   </div>

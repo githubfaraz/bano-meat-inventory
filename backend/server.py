@@ -2193,6 +2193,53 @@ async def get_pos_sales(
     
     return sales
 
+@api_router.delete("/pos-sales/{sale_id}")
+async def delete_pos_sale(sale_id: str, current_user: User = Depends(get_current_user)):
+    # Check if user is admin
+    user_doc = await db.users.find_one({"id": current_user.id}, {"_id": 0})
+    if not user_doc.get('is_admin', False):
+        raise HTTPException(status_code=403, detail="Only admin can delete sales")
+    
+    # Get the sale to restore inventory
+    sale = await db.pos_sales.find_one({"id": sale_id}, {"_id": 0})
+    if not sale:
+        raise HTTPException(status_code=404, detail="Sale not found")
+    
+    # Restore inventory for each item
+    for item in sale.get("items", []):
+        main_category_id = item.get("main_category_id")
+        quantity_kg = item.get("quantity_kg", 0)
+        quantity_pieces = item.get("quantity_pieces", 0)
+        
+        if main_category_id:
+            # Find the most recent purchase to restore inventory
+            # Note: This is a simplified approach. In production, you'd want to track
+            # which specific purchase the sale came from
+            category_summary = await db.inventory_summary.find_one(
+                {"main_category_id": main_category_id},
+                {"_id": 0}
+            )
+            
+            if category_summary:
+                # Restore the inventory
+                new_weight = category_summary.get("total_weight_kg", 0) + quantity_kg
+                new_pieces = category_summary.get("total_pieces", 0) + quantity_pieces
+                
+                await db.inventory_summary.update_one(
+                    {"main_category_id": main_category_id},
+                    {"$set": {
+                        "total_weight_kg": new_weight,
+                        "total_pieces": new_pieces
+                    }}
+                )
+    
+    # Delete the sale
+    result = await db.pos_sales.delete_one({"id": sale_id})
+    if result.deleted_count == 0:
+        raise HTTPException(status_code=404, detail="Sale not found")
+    
+    return {"message": "Sale deleted successfully", "id": sale_id}
+
 
 
 @api_router.get("/")
