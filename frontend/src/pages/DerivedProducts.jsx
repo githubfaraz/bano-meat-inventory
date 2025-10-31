@@ -147,6 +147,17 @@ const DerivedProducts = () => {
     return category ? category.name : "Unknown";
   };
 
+  // Get sale unit options based on selected category
+  const getSaleUnitOptions = () => {
+    const selectedCat = categories.find((c) => c.id === formData.main_category_id);
+    const categoryName = selectedCat?.name?.toLowerCase() || "";
+    
+    // Show "Pieces" option for Mutton and Frozen categories
+    const showPiecesOption = categoryName.includes("mutton") || categoryName.includes("frozen");
+    
+    return showPiecesOption;
+  };
+
   if (loading) {
     return <div className="p-8">Loading products...</div>;
   }
@@ -216,13 +227,24 @@ const DerivedProducts = () => {
                 <div className="flex items-center justify-between">
                   <span className="text-sm text-gray-600">Unit:</span>
                   <span className="text-sm font-medium">
-                    {product.sale_unit === "weight" ? "Weight (kg)" : `Package (${product.package_weight_kg}kg)`}
+                    {product.sale_unit === "weight" 
+                      ? "Weight (kg)" 
+                      : product.sale_unit === "pieces"
+                        ? "Pieces"
+                        : product.sale_unit === "package" && product.package_weight_kg
+                          ? `Package (${product.package_weight_kg * 1000}g)`
+                          : "Package"}
                   </span>
                 </div>
                 <div className="flex items-center justify-between">
                   <span className="text-sm text-gray-600">Price:</span>
                   <span className="text-lg font-bold text-emerald-600">
-                    ₹{product.selling_price}{product.sale_unit === "weight" ? "/kg" : "/pkg"}
+                    ₹{product.selling_price}
+                    {product.sale_unit === "weight" 
+                      ? "/kg" 
+                      : product.sale_unit === "pieces" 
+                        ? "/pc" 
+                        : "/pkg"}
                   </span>
                 </div>
                 {product.description && (
@@ -304,6 +326,7 @@ const DerivedProducts = () => {
             <div>
               <label className="block text-sm font-medium mb-2">Sale Unit *</label>
               <select
+                key={formData.main_category_id}
                 required
                 value={formData.sale_unit}
                 onChange={(e) => setFormData({ ...formData, sale_unit: e.target.value })}
@@ -311,10 +334,15 @@ const DerivedProducts = () => {
               >
                 <option value="weight">Weight (kg) - Sold by exact weight</option>
                 <option value="package">Package - Sold by fixed package</option>
+                {getSaleUnitOptions() && (
+                  <option value="pieces">Pieces - Sold by count</option>
+                )}
               </select>
               <p className="text-xs text-gray-500 mt-1">
                 {formData.sale_unit === "weight" 
                   ? "For fresh items sold by weight (e.g., Boneless Chicken)"
+                  : formData.sale_unit === "pieces"
+                  ? "For items sold by count (e.g., 1 piece = 1 unit)"
                   : "For pre-packaged items (e.g., Frozen Nuggets 500g)"}
               </p>
             </div>

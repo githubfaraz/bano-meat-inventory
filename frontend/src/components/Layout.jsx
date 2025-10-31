@@ -10,9 +10,28 @@ const Layout = ({ setAuth }) => {
   const location = useLocation();
   const navigate = useNavigate();
   
-  // Get current user from localStorage
-  const user = JSON.parse(localStorage.getItem("user") || "{}");
+  // Get current user from localStorage with safe parsing
+  const getUserFromStorage = () => {
+    try {
+      const userStr = localStorage.getItem("user");
+      console.log("Raw user from localStorage:", userStr);
+      if (!userStr || userStr === "undefined" || userStr === "null") {
+        console.log("No valid user in localStorage");
+        return {};
+      }
+      const parsed = JSON.parse(userStr);
+      console.log("Parsed user:", parsed);
+      console.log("Is admin?", parsed?.is_admin);
+      return parsed;
+    } catch (error) {
+      console.error("Error parsing user from localStorage:", error);
+      return {};
+    }
+  };
+  
+  const user = getUserFromStorage();
   const isAdmin = user?.is_admin || false;
+  console.log("Final isAdmin value:", isAdmin);
 
   const handleLogout = () => {
     localStorage.removeItem("token");
@@ -114,7 +133,18 @@ const Layout = ({ setAuth }) => {
           </div>
         </nav>
 
-        <div className="p-4 border-t border-gray-200">
+        <div className="p-4 border-t border-gray-200 space-y-3">
+          {/* User Info Display */}
+          <div className="px-4 py-2 bg-gray-50 rounded-lg text-sm">
+            <p className="font-semibold text-gray-700">{user?.full_name || user?.username || "User"}</p>
+            <p className="text-xs text-gray-500">{user?.email || ""}</p>
+            {isAdmin && (
+              <span className="inline-block mt-1 px-2 py-0.5 bg-emerald-100 text-emerald-700 text-xs rounded">
+                Admin
+              </span>
+            )}
+          </div>
+          
           <Button
             onClick={handleLogout}
             variant="ghost"

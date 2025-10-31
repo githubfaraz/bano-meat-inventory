@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
 import { API } from "@/App";
@@ -14,24 +14,52 @@ const Login = ({ setAuth }) => {
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
 
+  useEffect(() => {
+    console.log("🔧 API URL configured as:", API);
+  }, []);
+
   const handleLogin = async (e) => {
     e.preventDefault();
     setLoading(true);
 
     try {
-      const response = await axios.post(`${API}/auth/login`, {
-        username,
-        password,
-      });
+      console.log("🔐 Attempting login to:", `${API}/auth/login`);
+      const response = await axios.post(
+        `${API}/auth/login`,
+        {
+          username,
+          password,
+        },
+        {
+          timeout: 10000, // 10 second timeout
+        }
+      );
 
+      console.log("✅ Login response received:", response.data);
       localStorage.setItem("token", response.data.access_token);
       localStorage.setItem("user", JSON.stringify(response.data.user));
       toast.success("Login successful!");
       setAuth(true);
       navigate("/");
     } catch (error) {
-      toast.error(error.response?.data?.detail || "Login failed");
+      console.error("❌ Login error:", error);
+      console.error("Error response:", error.response);
+      console.error("Error message:", error.message);
+      
+      let errorMsg = "Login failed";
+      if (error.code === "ECONNABORTED") {
+        errorMsg = "Connection timeout - Please check your network";
+      } else if (error.response) {
+        errorMsg = error.response.data?.detail || `Error: ${error.response.status}`;
+      } else if (error.request) {
+        errorMsg = "No response from server - Please check backend URL";
+      } else {
+        errorMsg = error.message;
+      }
+      
+      toast.error(errorMsg);
     } finally {
+      console.log("🏁 Login attempt finished");
       setLoading(false);
     }
   };
@@ -49,6 +77,7 @@ const Login = ({ setAuth }) => {
             Bano Fresh
           </h1>
           <p className="text-gray-600">Sign in to your account</p>
+          <p className="text-xs text-gray-400 mt-2">API: {API}</p>
         </div>
 
         <form onSubmit={handleLogin} className="space-y-6">
