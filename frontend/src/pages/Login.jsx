@@ -77,6 +77,7 @@ const Login = ({ setAuth }) => {
             Bano Fresh
           </h1>
           <p className="text-gray-600">Sign in to your account</p>
+          <p className="text-xs text-gray-400 mt-2">API: {API}</p>
         </div>
 
         <form onSubmit={handleLogin} className="space-y-6">
