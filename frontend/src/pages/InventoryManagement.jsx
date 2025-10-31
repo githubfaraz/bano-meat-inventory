@@ -595,12 +595,12 @@ const InventoryManagement = () => {
                         <div className="mt-2">
                           {sale.items?.map((item, idx) => (
                             <div key={idx} className="text-sm">
-                              <span className="font-medium">{item.product_name || 'Unknown Product'}</span>
+                              <span className="font-medium">{item.derived_product_name || 'Unknown Product'}</span>
                               <span className="text-gray-600 ml-2">
-                                {item.weight_kg 
-                                  ? `${item.weight_kg}kg × ₹${item.price_per_kg || 0}/kg` 
-                                  : item.quantity 
-                                    ? `${item.quantity || 0}pcs × ₹${item.price || 0}/pc`
+                                {item.quantity_kg > 0
+                                  ? `${item.quantity_kg}kg × ₹${item.selling_price}/kg` 
+                                  : item.quantity_pieces 
+                                    ? `${item.quantity_pieces}pcs × ₹${item.selling_price}/pc`
                                     : 'N/A'}
                               </span>
                             </div>
@@ -608,7 +608,7 @@ const InventoryManagement = () => {
                         </div>
                       </div>
                       <div className="text-right">
-                        <p className="text-2xl font-bold text-emerald-600">₹{sale.final_amount}</p>
+                        <p className="text-2xl font-bold text-emerald-600">₹{sale.total}</p>
                         <p className="text-sm text-gray-600">{new Date(sale.created_at).toLocaleDateString()}</p>
                         <p className="text-xs text-gray-400">{new Date(sale.created_at).toLocaleTimeString()}</p>
                       </div>
