@@ -77,13 +77,36 @@ const Layout = ({ setAuth }) => {
         </div>
 
         <nav className="flex-1 p-4 space-y-2 overflow-y-auto">
-          {/* New Inventory System */}
+          {/* Dashboard */}
+          {navItems
+            .filter((item) => item.section === "dashboard")
+            .map((item) => {
+              const Icon = item.icon;
+              const isActive = location.pathname === item.path;
+              return (
+                <Link
+                  key={item.path}
+                  to={item.path}
+                  className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-colors mb-4 ${
+                    isActive
+                      ? "bg-emerald-50 text-emerald-600 font-semibold"
+                      : "text-gray-700 hover:bg-gray-100"
+                  }`}
+                  data-testid={`nav-${item.label.toLowerCase()}`}
+                >
+                  <Icon className="h-5 w-5" />
+                  {item.label}
+                </Link>
+              );
+            })}
+
+          {/* Inventory System */}
           <div className="mb-4">
             <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2 px-4">
               Inventory System
             </p>
             {navItems
-              .filter((item) => item.section === "new" && (!item.adminOnly || isAdmin))
+              .filter((item) => item.section === "inventory" && (!item.adminOnly || isAdmin))
               .map((item) => {
                 const Icon = item.icon;
                 const isActive = location.pathname === item.path;
@@ -105,13 +128,13 @@ const Layout = ({ setAuth }) => {
               })}
           </div>
 
-          {/* Common/General */}
+          {/* General */}
           <div className="mb-4">
             <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2 px-4">
               General
             </p>
             {navItems
-              .filter((item) => item.section === "common" && (!item.adminOnly || isAdmin))
+              .filter((item) => item.section === "general" && (!item.adminOnly || isAdmin))
               .map((item) => {
                 const Icon = item.icon;
                 const isActive = location.pathname === item.path;
