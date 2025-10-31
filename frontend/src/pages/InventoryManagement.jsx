@@ -613,6 +613,22 @@ const InventoryManagement = () => {
                         <p className="text-2xl font-bold text-emerald-600">₹{sale.total}</p>
                         <p className="text-sm text-gray-600">{new Date(sale.created_at).toLocaleDateString()}</p>
                         <p className="text-xs text-gray-400">{new Date(sale.created_at).toLocaleTimeString()}</p>
+                        {isAdmin && (
+                          <div className="flex gap-2 mt-2 justify-end">
+                            <button
+                              onClick={() => handleEditSale(sale)}
+                              className="px-3 py-1 bg-blue-500 text-white rounded hover:bg-blue-600 text-sm"
+                            >
+                              Edit
+                            </button>
+                            <button
+                              onClick={() => handleDeleteSale(sale.id)}
+                              className="px-3 py-1 bg-red-500 text-white rounded hover:bg-red-600 text-sm"
+                            >
+                              Delete
+                            </button>
+                          </div>
+                        )}
                       </div>
                     </div>
                   </div>
