@@ -42,20 +42,21 @@ const Layout = ({ setAuth }) => {
   };
 
   const navItems = [
-    { path: "/", icon: LayoutDashboard, label: "Dashboard" },
+    // Dashboard
+    { path: "/", icon: LayoutDashboard, label: "Dashboard", section: "dashboard" },
     // Inventory System
-    { path: "/main-categories", icon: List, label: "Main Categories", section: "new", adminOnly: true },
-    { path: "/derived-products", icon: Box, label: "Derived Products", section: "new", adminOnly: true },
-    { path: "/inventory-management", icon: Warehouse, label: "Inventory", section: "new" },
-    { path: "/daily-pieces-tracking", icon: PieChart, label: "Daily Pieces", section: "new" },
-    { path: "/daily-waste-tracking", icon: Trash2, label: "Daily Waste", section: "new" },
-    { path: "/new-pos", icon: ShoppingCart, label: "New POS", section: "new" },
+    { path: "/main-categories", icon: List, label: "Main Categories", section: "inventory", adminOnly: true },
+    { path: "/derived-products", icon: Box, label: "Derived Products", section: "inventory", adminOnly: true },
+    { path: "/inventory-management", icon: Warehouse, label: "Inventory", section: "inventory" },
+    { path: "/daily-pieces-tracking", icon: PieChart, label: "Daily Pieces", section: "inventory" },
+    { path: "/daily-waste-tracking", icon: Trash2, label: "Daily Waste", section: "inventory" },
+    { path: "/new-pos", icon: ShoppingCart, label: "New POS", section: "inventory" },
     // General
-    { path: "/sales", icon: TrendingUp, label: "Sales", section: "common" },
-    { path: "/vendors", icon: Store, label: "Vendors", section: "common" },
-    { path: "/customers", icon: Users, label: "Customers", section: "common" },
-    { path: "/reports", icon: FileText, label: "Reports", section: "common" },
-    { path: "/users", icon: UserCog, label: "Users", adminOnly: true, section: "common" },
+    { path: "/sales", icon: TrendingUp, label: "Sales", section: "general" },
+    { path: "/vendors", icon: Store, label: "Vendors", section: "general" },
+    { path: "/customers", icon: Users, label: "Customers", section: "general" },
+    { path: "/reports", icon: FileText, label: "Reports", section: "general" },
+    { path: "/users", icon: UserCog, label: "Users", adminOnly: true, section: "general" },
   ];
 
   return (
