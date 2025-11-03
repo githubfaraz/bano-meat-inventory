@@ -184,54 +184,169 @@ const NewPOS = () => {
       <html>
       <head>
         <title>Receipt - Bano Fresh</title>
+        <meta charset="UTF-8">
         <style>
-          body { font-family: Arial, sans-serif; margin: 20px; }
-          .header { text-align: center; margin-bottom: 20px; }
-          .header h1 { margin: 0; color: #059669; }
-          .info { margin-bottom: 20px; }
-          .items table { width: 100%; border-collapse: collapse; margin: 20px 0; }
-          .items th, .items td { padding: 8px; text-align: left; border-bottom: 1px solid #ddd; }
-          .items th { background-color: #f3f4f6; }
-          .totals { margin-top: 20px; text-align: right; }
-          .totals div { margin: 5px 0; }
-          .total-final { font-size: 1.2em; font-weight: bold; color: #059669; }
-          .footer { margin-top: 30px; text-align: center; font-size: 0.9em; color: #6b7280; }
+          * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+          }
+          
+          @page {
+            size: 3in 6in;
+            margin: 0;
+          }
+          
+          body { 
+            font-family: 'Courier New', monospace;
+            font-size: 11px;
+            width: 3in;
+            max-width: 3in;
+            margin: 0 auto;
+            padding: 10px;
+            background: white;
+          }
+          
+          .header { 
+            text-align: center; 
+            margin-bottom: 12px;
+            border-bottom: 1px dashed #000;
+            padding-bottom: 8px;
+          }
+          
+          .logo {
+            width: 50px;
+            height: 50px;
+            margin: 0 auto 8px;
+          }
+          
+          .header h1 { 
+            margin: 5px 0;
+            font-size: 18px;
+            font-weight: bold;
+            text-transform: uppercase;
+          }
+          
+          .header p {
+            font-size: 10px;
+            margin: 2px 0;
+          }
+          
+          .info { 
+            margin: 8px 0;
+            font-size: 10px;
+            line-height: 1.4;
+          }
+          
+          .items { 
+            margin: 8px 0;
+            border-top: 1px dashed #000;
+            border-bottom: 1px dashed #000;
+            padding: 8px 0;
+          }
+          
+          .items table { 
+            width: 100%;
+            border-collapse: collapse;
+          }
+          
+          .items th { 
+            font-size: 10px;
+            text-align: left;
+            padding: 4px 2px;
+            border-bottom: 1px solid #000;
+          }
+          
+          .items td { 
+            font-size: 10px;
+            padding: 4px 2px;
+            vertical-align: top;
+          }
+          
+          .item-name {
+            font-weight: bold;
+          }
+          
+          .totals { 
+            margin: 8px 0;
+            font-size: 11px;
+          }
+          
+          .totals div { 
+            display: flex;
+            justify-content: space-between;
+            margin: 3px 0;
+            padding: 2px 0;
+          }
+          
+          .total-final { 
+            font-size: 13px;
+            font-weight: bold;
+            border-top: 1px solid #000;
+            padding-top: 5px !important;
+            margin-top: 5px !important;
+          }
+          
+          .footer { 
+            margin-top: 10px;
+            text-align: center;
+            font-size: 10px;
+            line-height: 1.4;
+            border-top: 1px dashed #000;
+            padding-top: 8px;
+          }
+          
           @media print {
-            body { margin: 0; }
+            body { 
+              margin: 0;
+              padding: 10px;
+              width: 3in;
+            }
+            
+            @page {
+              size: 3in 6in;
+              margin: 0;
+            }
+            
+            html, body {
+              height: auto;
+              overflow: visible;
+            }
           }
         </style>
       </head>
       <body>
         <div class="header">
+          <img src="https://customer-assets.emergentagent.com/job_98f43d7c-462e-47e8-bf72-c54d3fbfbeeb/artifacts/kkp6xmyc_bano_fresh_logo.png" 
+               alt="Bano Fresh Logo" 
+               class="logo">
           <h1>BANO FRESH</h1>
           <p>Premium Meat Shop</p>
-          <p style="font-size: 0.9em;">Date: ${new Date().toLocaleString()}</p>
+          <p>${new Date().toLocaleString('en-IN', { dateStyle: 'short', timeStyle: 'short' })}</p>
         </div>
         
         <div class="info">
-          <strong>Customer:</strong> ${customerName}<br>
-          <strong>Payment Method:</strong> ${paymentMethod.toUpperCase()}
+          <div><strong>Customer:</strong> ${customerName}</div>
+          <div><strong>Payment:</strong> ${paymentMethod.toUpperCase()}</div>
         </div>
         
         <div class="items">
           <table>
             <thead>
               <tr>
-                <th>Item</th>
-                <th>Category</th>
-                <th>Qty (kg)</th>
-                <th>Price/kg</th>
-                <th>Total</th>
+                <th style="width: 40%;">Item</th>
+                <th style="width: 20%; text-align: center;">Qty</th>
+                <th style="width: 20%; text-align: right;">Rate</th>
+                <th style="width: 20%; text-align: right;">Amt</th>
               </tr>
             </thead>
             <tbody>
               ${cart.map(item => `
                 <tr>
-                  <td>${item.derived_product_name}</td>
-                  <td>${item.main_category_name}</td>
-                  <td>${item.quantity_kg}</td>
-                  <td>₹${item.selling_price}</td>
-                  <td>₹${item.total.toFixed(2)}</td>
+                  <td class="item-name">${item.derived_product_name}</td>
+                  <td style="text-align: center;">${item.quantity_kg}kg</td>
+                  <td style="text-align: right;">₹${item.selling_price}</td>
+                  <td style="text-align: right;">₹${item.total.toFixed(2)}</td>
                 </tr>
               `).join('')}
             </tbody>
@@ -239,27 +354,48 @@ const NewPOS = () => {
         </div>
         
         <div class="totals">
-          <div>Subtotal: ₹${totals.subtotal}</div>
-          <div style="color: #dc2626;">Discount (${discount}%): -₹${totals.discountAmount}</div>
-          <div>Tax (${taxRate}%): ₹${totals.taxAmount}</div>
-          <div class="total-final">Total: ₹${totals.total}</div>
+          <div>
+            <span>Subtotal:</span>
+            <span>₹${totals.subtotal}</span>
+          </div>
+          ${discount > 0 ? `
+          <div>
+            <span>Discount (${discount}%):</span>
+            <span>-₹${totals.discountAmount}</span>
+          </div>
+          ` : ''}
+          ${taxRate > 0 ? `
+          <div>
+            <span>Tax (${taxRate}%):</span>
+            <span>₹${totals.taxAmount}</span>
+          </div>
+          ` : ''}
+          <div class="total-final">
+            <span>TOTAL:</span>
+            <span>₹${totals.total}</span>
+          </div>
         </div>
         
         <div class="footer">
-          <p>Thank you for shopping with Bano Fresh!</p>
-          <p>Visit us again</p>
+          <p><strong>Thank you for shopping!</strong></p>
+          <p>Visit us again at Bano Fresh</p>
         </div>
         
         <script>
           window.onload = function() {
-            window.print();
+            setTimeout(function() {
+              window.print();
+              setTimeout(function() {
+                window.close();
+              }, 100);
+            }, 250);
           }
         </script>
       </body>
       </html>
     `;
     
-    const printWindow = window.open('', '_blank');
+    const printWindow = window.open('', '_blank', 'width=288,height=576');
     printWindow.document.write(receiptContent);
     printWindow.document.close();
   };
