@@ -183,7 +183,7 @@ const NewPOS = () => {
       <!DOCTYPE html>
       <html>
       <head>
-        <title>Receipt - Bano Fresh</title>
+        <title>Receipt</title>
         <meta charset="UTF-8">
         <style>
           * {
@@ -193,56 +193,63 @@ const NewPOS = () => {
           }
           
           @page {
-            size: 3in 6in;
+            size: 3in 4in;
             margin: 0;
           }
           
           body { 
             font-family: 'Courier New', monospace;
-            font-size: 11px;
+            font-size: 12px;
             width: 3in;
             max-width: 3in;
             margin: 0 auto;
-            padding: 10px;
+            padding: 8px;
             background: white;
+            color: #000;
+            -webkit-print-color-adjust: exact;
+            print-color-adjust: exact;
           }
           
           .header { 
             text-align: center; 
-            margin-bottom: 12px;
-            border-bottom: 1px dashed #000;
+            margin-bottom: 10px;
+            border-bottom: 2px solid #000;
             padding-bottom: 8px;
           }
           
           .logo {
-            width: 50px;
-            height: 50px;
-            margin: 0 auto 8px;
+            width: 100px;
+            height: 100px;
+            margin: 0 auto 6px;
+            display: block;
           }
           
           .header h1 { 
-            margin: 5px 0;
-            font-size: 18px;
+            margin: 4px 0;
+            font-size: 20px;
             font-weight: bold;
             text-transform: uppercase;
+            color: #000;
           }
           
           .header p {
-            font-size: 10px;
+            font-size: 11px;
             margin: 2px 0;
+            color: #000;
           }
           
           .info { 
-            margin: 8px 0;
-            font-size: 10px;
-            line-height: 1.4;
+            margin: 6px 0;
+            font-size: 11px;
+            line-height: 1.5;
+            color: #000;
           }
           
           .items { 
-            margin: 8px 0;
+            margin: 6px 0;
             border-top: 1px dashed #000;
             border-bottom: 1px dashed #000;
-            padding: 8px 0;
+            padding: 6px 0;
           }
           
           .items table { 
@@ -251,25 +258,32 @@ const NewPOS = () => {
           }
           
           .items th { 
-            font-size: 10px;
+            font-size: 11px;
+            font-weight: bold;
             text-align: left;
             padding: 4px 2px;
             border-bottom: 1px solid #000;
+            color: #000;
           }
           
           .items td { 
-            font-size: 10px;
-            padding: 4px 2px;
+            font-size: 12px;
+            font-weight: bold;
+            padding: 5px 2px;
             vertical-align: top;
+            color: #000;
           }
           
           .item-name {
             font-weight: bold;
+            color: #000;
           }
           
           .totals { 
-            margin: 8px 0;
-            font-size: 11px;
+            margin: 6px 0;
+            font-size: 12px;
+            font-weight: bold;
+            color: #000;
           }
           
           .totals div { 
@@ -277,34 +291,38 @@ const NewPOS = () => {
             justify-content: space-between;
             margin: 3px 0;
             padding: 2px 0;
+            color: #000;
           }
           
           .total-final { 
-            font-size: 13px;
+            font-size: 14px;
             font-weight: bold;
-            border-top: 1px solid #000;
+            border-top: 2px solid #000;
             padding-top: 5px !important;
             margin-top: 5px !important;
+            color: #000;
           }
           
           .footer { 
-            margin-top: 10px;
+            margin-top: 8px;
             text-align: center;
-            font-size: 10px;
+            font-size: 11px;
             line-height: 1.4;
             border-top: 1px dashed #000;
-            padding-top: 8px;
+            padding-top: 6px;
+            color: #000;
           }
           
           @media print {
             body { 
               margin: 0;
-              padding: 10px;
+              padding: 8px;
               width: 3in;
+              color: #000;
             }
             
             @page {
-              size: 3in 6in;
+              size: 3in 4in;
               margin: 0;
             }
             
@@ -312,20 +330,26 @@ const NewPOS = () => {
               height: auto;
               overflow: visible;
             }
+            
+            * {
+              color: #000 !important;
+              -webkit-print-color-adjust: exact;
+              print-color-adjust: exact;
+            }
           }
         </style>
       </head>
       <body>
         <div class="header">
           <img src="https://customer-assets.emergentagent.com/job_98f43d7c-462e-47e8-bf72-c54d3fbfbeeb/artifacts/kkp6xmyc_bano_fresh_logo.png" 
-               alt="Bano Fresh Logo" 
+               alt="Logo" 
                class="logo">
           <h1>BANO FRESH</h1>
           <p>Premium Meat Shop</p>
-          <p>${new Date().toLocaleString('en-IN', { dateStyle: 'short', timeStyle: 'short' })}</p>
         </div>
         
         <div class="info">
+          <div><strong>Date:</strong> ${new Date().toLocaleString('en-IN', { dateStyle: 'short', timeStyle: 'short' })}</div>
           <div><strong>Customer:</strong> ${customerName}</div>
           <div><strong>Payment:</strong> ${paymentMethod.toUpperCase()}</div>
         </div>
@@ -334,10 +358,10 @@ const NewPOS = () => {
           <table>
             <thead>
               <tr>
-                <th style="width: 40%;">Item</th>
+                <th style="width: 35%;">Item</th>
                 <th style="width: 20%; text-align: center;">Qty</th>
-                <th style="width: 20%; text-align: right;">Rate</th>
-                <th style="width: 20%; text-align: right;">Amt</th>
+                <th style="width: 22%; text-align: right;">Rate</th>
+                <th style="width: 23%; text-align: right;">Amt</th>
               </tr>
             </thead>
             <tbody>
@@ -395,7 +419,7 @@ const NewPOS = () => {
       </html>
     `;
     
-    const printWindow = window.open('', '_blank', 'width=288,height=576');
+    const printWindow = window.open('', '_blank', 'width=288,height=384');
     printWindow.document.write(receiptContent);
     printWindow.document.close();
   };
