@@ -193,7 +193,7 @@ const NewPOS = () => {
           }
           
           @page {
-            size: 3in 4in;
+            size: 3in auto;
             margin: 0;
           }
           
@@ -203,7 +203,7 @@ const NewPOS = () => {
             width: 3in;
             max-width: 3in;
             margin: 0 auto;
-            padding: 8px;
+            padding: 6px 8px;
             background: white;
             color: #000;
             -webkit-print-color-adjust: exact;
@@ -212,44 +212,45 @@ const NewPOS = () => {
           
           .header { 
             text-align: center; 
-            margin-bottom: 10px;
+            margin-bottom: 6px;
             border-bottom: 2px solid #000;
-            padding-bottom: 8px;
+            padding-bottom: 6px;
           }
           
           .logo {
-            width: 100px;
-            height: 100px;
-            margin: 0 auto 6px;
+            width: 80px;
+            height: 80px;
+            margin: 0 auto 4px;
             display: block;
           }
           
           .header h1 { 
-            margin: 4px 0;
-            font-size: 20px;
+            margin: 3px 0;
+            font-size: 18px;
             font-weight: bold;
             text-transform: uppercase;
             color: #000;
           }
           
           .header p {
-            font-size: 11px;
-            margin: 2px 0;
+            font-size: 10px;
+            margin: 1px 0;
             color: #000;
           }
           
           .info { 
-            margin: 6px 0;
-            font-size: 11px;
-            line-height: 1.5;
+            margin: 5px 0;
+            font-size: 13px;
+            line-height: 1.4;
             color: #000;
+            font-weight: bold;
           }
           
           .items { 
-            margin: 6px 0;
+            margin: 5px 0;
             border-top: 1px dashed #000;
             border-bottom: 1px dashed #000;
-            padding: 6px 0;
+            padding: 5px 0;
           }
           
           .items table { 
@@ -261,7 +262,7 @@ const NewPOS = () => {
             font-size: 11px;
             font-weight: bold;
             text-align: left;
-            padding: 4px 2px;
+            padding: 3px 2px;
             border-bottom: 1px solid #000;
             color: #000;
           }
@@ -269,7 +270,7 @@ const NewPOS = () => {
           .items td { 
             font-size: 12px;
             font-weight: bold;
-            padding: 5px 2px;
+            padding: 4px 2px;
             vertical-align: top;
             color: #000;
           }
@@ -280,7 +281,7 @@ const NewPOS = () => {
           }
           
           .totals { 
-            margin: 6px 0;
+            margin: 5px 0;
             font-size: 12px;
             font-weight: bold;
             color: #000;
@@ -289,8 +290,8 @@ const NewPOS = () => {
           .totals div { 
             display: flex;
             justify-content: space-between;
-            margin: 3px 0;
-            padding: 2px 0;
+            margin: 2px 0;
+            padding: 1px 0;
             color: #000;
           }
           
@@ -298,31 +299,32 @@ const NewPOS = () => {
             font-size: 14px;
             font-weight: bold;
             border-top: 2px solid #000;
-            padding-top: 5px !important;
-            margin-top: 5px !important;
+            padding-top: 4px !important;
+            margin-top: 4px !important;
             color: #000;
           }
           
           .footer { 
-            margin-top: 8px;
+            margin-top: 6px;
             text-align: center;
             font-size: 11px;
-            line-height: 1.4;
+            line-height: 1.3;
             border-top: 1px dashed #000;
-            padding-top: 6px;
+            padding-top: 5px;
             color: #000;
+            page-break-inside: avoid;
           }
           
           @media print {
             body { 
               margin: 0;
-              padding: 8px;
+              padding: 6px 8px;
               width: 3in;
               color: #000;
             }
             
             @page {
-              size: 3in 4in;
+              size: 3in auto;
               margin: 0;
             }
             
@@ -335,6 +337,11 @@ const NewPOS = () => {
               color: #000 !important;
               -webkit-print-color-adjust: exact;
               print-color-adjust: exact;
+            }
+            
+            .footer {
+              page-break-inside: avoid;
+              page-break-before: avoid;
             }
           }
         </style>
@@ -401,8 +408,8 @@ const NewPOS = () => {
         </div>
         
         <div class="footer">
-          <p><strong>Thank you for shopping!</strong></p>
-          <p>Visit us again at Bano Fresh</p>
+          <p><strong>Thank you!</strong></p>
+          <p>Visit us again</p>
         </div>
         
         <script>
@@ -419,7 +426,7 @@ const NewPOS = () => {
       </html>
     `;
     
-    const printWindow = window.open('', '_blank', 'width=288,height=384');
+    const printWindow = window.open('', '_blank', 'width=288');
     printWindow.document.write(receiptContent);
     printWindow.document.close();
   };
