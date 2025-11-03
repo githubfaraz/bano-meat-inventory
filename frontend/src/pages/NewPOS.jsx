@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import axios from "axios";
 import { toast } from "sonner";
-import { Plus, Trash2, ShoppingCart, Printer } from "lucide-react";
+import { Plus, Trash2, ShoppingCart, Printer, Search } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "../components/ui/card";
 import { Button } from "../components/ui/button";
 
@@ -18,6 +18,8 @@ const NewPOS = () => {
   const [taxRate, setTaxRate] = useState(0);
   const [paymentMethod, setPaymentMethod] = useState("cash");
   const [loading, setLoading] = useState(false);
+  const [customerSearchTerm, setCustomerSearchTerm] = useState("");
+  const [showCustomerDropdown, setShowCustomerDropdown] = useState(false);
 
   const API_URL = process.env.REACT_APP_BACKEND_URL || "http://localhost:8001";
 
