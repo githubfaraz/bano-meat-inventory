@@ -449,7 +449,7 @@ const NewPOS = () => {
             <CardContent className="space-y-4">
               <div>
                 <label className="block text-sm font-medium mb-2">Customer</label>
-                <div className="relative">
+                <div className="relative" ref={customerDropdownRef}>
                   <div
                     onClick={() => setShowCustomerDropdown(!showCustomerDropdown)}
                     className="w-full border rounded-lg px-3 py-2 cursor-pointer bg-white flex items-center justify-between hover:border-gray-400"
