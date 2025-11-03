@@ -192,40 +192,52 @@ const NewPOS = () => {
             box-sizing: border-box;
           }
           
-          @page {
-            size: 3in auto;
+          html, body {
+            width: 3in;
+            height: auto;
             margin: 0;
+            padding: 0;
+          }
+          
+          @page {
+            size: 72mm auto;
+            margin: 0mm;
           }
           
           body { 
             font-family: 'Courier New', monospace;
             font-size: 12px;
-            width: 3in;
-            max-width: 3in;
-            margin: 0 auto;
-            padding: 6px 8px;
+            width: 72mm;
+            max-width: 72mm;
+            margin: 0;
+            padding: 4mm 6mm;
             background: white;
             color: #000;
             -webkit-print-color-adjust: exact;
             print-color-adjust: exact;
           }
           
+          .receipt-container {
+            width: 100%;
+            page-break-after: avoid;
+          }
+          
           .header { 
             text-align: center; 
-            margin-bottom: 6px;
+            margin-bottom: 4mm;
             border-bottom: 2px solid #000;
-            padding-bottom: 6px;
+            padding-bottom: 4mm;
           }
           
           .logo {
-            width: 80px;
-            height: 80px;
-            margin: 0 auto 4px;
+            width: 20mm;
+            height: 20mm;
+            margin: 0 auto 3mm;
             display: block;
           }
           
           .header h1 { 
-            margin: 3px 0;
+            margin: 2mm 0;
             font-size: 18px;
             font-weight: bold;
             text-transform: uppercase;
@@ -234,23 +246,23 @@ const NewPOS = () => {
           
           .header p {
             font-size: 10px;
-            margin: 1px 0;
+            margin: 1mm 0;
             color: #000;
           }
           
           .info { 
-            margin: 5px 0;
+            margin: 3mm 0;
             font-size: 13px;
-            line-height: 1.4;
+            line-height: 1.3;
             color: #000;
             font-weight: bold;
           }
           
           .items { 
-            margin: 5px 0;
+            margin: 3mm 0;
             border-top: 1px dashed #000;
             border-bottom: 1px dashed #000;
-            padding: 5px 0;
+            padding: 3mm 0;
           }
           
           .items table { 
@@ -262,7 +274,7 @@ const NewPOS = () => {
             font-size: 11px;
             font-weight: bold;
             text-align: left;
-            padding: 3px 2px;
+            padding: 2mm 1mm;
             border-bottom: 1px solid #000;
             color: #000;
           }
@@ -270,7 +282,7 @@ const NewPOS = () => {
           .items td { 
             font-size: 12px;
             font-weight: bold;
-            padding: 4px 2px;
+            padding: 2mm 1mm;
             vertical-align: top;
             color: #000;
           }
@@ -281,7 +293,7 @@ const NewPOS = () => {
           }
           
           .totals { 
-            margin: 5px 0;
+            margin: 3mm 0;
             font-size: 12px;
             font-weight: bold;
             color: #000;
@@ -290,8 +302,8 @@ const NewPOS = () => {
           .totals div { 
             display: flex;
             justify-content: space-between;
-            margin: 2px 0;
-            padding: 1px 0;
+            margin: 1mm 0;
+            padding: 0.5mm 0;
             color: #000;
           }
           
@@ -299,38 +311,39 @@ const NewPOS = () => {
             font-size: 14px;
             font-weight: bold;
             border-top: 2px solid #000;
-            padding-top: 4px !important;
-            margin-top: 4px !important;
+            padding-top: 2mm !important;
+            margin-top: 2mm !important;
             color: #000;
           }
           
           .footer { 
-            margin-top: 6px;
+            margin-top: 3mm;
             text-align: center;
             font-size: 11px;
-            line-height: 1.3;
+            line-height: 1.2;
             border-top: 1px dashed #000;
-            padding-top: 5px;
+            padding-top: 3mm;
+            padding-bottom: 2mm;
             color: #000;
             page-break-inside: avoid;
+            page-break-after: avoid;
           }
           
           @media print {
-            body { 
+            html, body { 
+              width: 72mm;
+              height: auto;
               margin: 0;
-              padding: 6px 8px;
-              width: 3in;
-              color: #000;
+              padding: 0;
+            }
+            
+            body {
+              padding: 4mm 6mm;
             }
             
             @page {
-              size: 3in auto;
-              margin: 0;
-            }
-            
-            html, body {
-              height: auto;
-              overflow: visible;
+              size: 72mm auto;
+              margin: 0mm;
             }
             
             * {
@@ -339,77 +352,84 @@ const NewPOS = () => {
               print-color-adjust: exact;
             }
             
+            .receipt-container {
+              page-break-after: avoid;
+            }
+            
             .footer {
               page-break-inside: avoid;
               page-break-before: avoid;
+              page-break-after: avoid;
             }
           }
         </style>
       </head>
       <body>
-        <div class="header">
-          <img src="https://customer-assets.emergentagent.com/job_98f43d7c-462e-47e8-bf72-c54d3fbfbeeb/artifacts/kkp6xmyc_bano_fresh_logo.png" 
-               alt="Logo" 
-               class="logo">
-          <h1>BANO FRESH</h1>
-          <p>Premium Meat Shop</p>
-        </div>
-        
-        <div class="info">
-          <div><strong>Date:</strong> ${new Date().toLocaleString('en-IN', { dateStyle: 'short', timeStyle: 'short' })}</div>
-          <div><strong>Customer:</strong> ${customerName}</div>
-          <div><strong>Payment:</strong> ${paymentMethod.toUpperCase()}</div>
-        </div>
-        
-        <div class="items">
-          <table>
-            <thead>
-              <tr>
-                <th style="width: 35%;">Item</th>
-                <th style="width: 20%; text-align: center;">Qty</th>
-                <th style="width: 22%; text-align: right;">Rate</th>
-                <th style="width: 23%; text-align: right;">Amt</th>
-              </tr>
-            </thead>
-            <tbody>
-              ${cart.map(item => `
+        <div class="receipt-container">
+          <div class="header">
+            <img src="https://customer-assets.emergentagent.com/job_98f43d7c-462e-47e8-bf72-c54d3fbfbeeb/artifacts/kkp6xmyc_bano_fresh_logo.png" 
+                 alt="Logo" 
+                 class="logo">
+            <h1>BANO FRESH</h1>
+            <p>Premium Meat Shop</p>
+          </div>
+          
+          <div class="info">
+            <div><strong>Date:</strong> ${new Date().toLocaleString('en-IN', { dateStyle: 'short', timeStyle: 'short' })}</div>
+            <div><strong>Customer:</strong> ${customerName}</div>
+            <div><strong>Payment:</strong> ${paymentMethod.toUpperCase()}</div>
+          </div>
+          
+          <div class="items">
+            <table>
+              <thead>
                 <tr>
-                  <td class="item-name">${item.derived_product_name}</td>
-                  <td style="text-align: center;">${item.quantity_kg}kg</td>
-                  <td style="text-align: right;">₹${item.selling_price}</td>
-                  <td style="text-align: right;">₹${item.total.toFixed(2)}</td>
+                  <th style="width: 35%;">Item</th>
+                  <th style="width: 20%; text-align: center;">Qty</th>
+                  <th style="width: 22%; text-align: right;">Rate</th>
+                  <th style="width: 23%; text-align: right;">Amt</th>
                 </tr>
-              `).join('')}
-            </tbody>
-          </table>
-        </div>
-        
-        <div class="totals">
-          <div>
-            <span>Subtotal:</span>
-            <span>₹${totals.subtotal}</span>
+              </thead>
+              <tbody>
+                ${cart.map(item => `
+                  <tr>
+                    <td class="item-name">${item.derived_product_name}</td>
+                    <td style="text-align: center;">${item.quantity_kg}kg</td>
+                    <td style="text-align: right;">₹${item.selling_price}</td>
+                    <td style="text-align: right;">₹${item.total.toFixed(2)}</td>
+                  </tr>
+                `).join('')}
+              </tbody>
+            </table>
           </div>
-          ${discount > 0 ? `
-          <div>
-            <span>Discount (${discount}%):</span>
-            <span>-₹${totals.discountAmount}</span>
+          
+          <div class="totals">
+            <div>
+              <span>Subtotal:</span>
+              <span>₹${totals.subtotal}</span>
+            </div>
+            ${discount > 0 ? `
+            <div>
+              <span>Discount (${discount}%):</span>
+              <span>-₹${totals.discountAmount}</span>
+            </div>
+            ` : ''}
+            ${taxRate > 0 ? `
+            <div>
+              <span>Tax (${taxRate}%):</span>
+              <span>₹${totals.taxAmount}</span>
+            </div>
+            ` : ''}
+            <div class="total-final">
+              <span>TOTAL:</span>
+              <span>₹${totals.total}</span>
+            </div>
           </div>
-          ` : ''}
-          ${taxRate > 0 ? `
-          <div>
-            <span>Tax (${taxRate}%):</span>
-            <span>₹${totals.taxAmount}</span>
+          
+          <div class="footer">
+            <p><strong>Thank you!</strong></p>
+            <p>Visit us again</p>
           </div>
-          ` : ''}
-          <div class="total-final">
-            <span>TOTAL:</span>
-            <span>₹${totals.total}</span>
-          </div>
-        </div>
-        
-        <div class="footer">
-          <p><strong>Thank you!</strong></p>
-          <p>Visit us again</p>
         </div>
         
         <script>
