@@ -74,6 +74,26 @@ const NewPOS = () => {
     }
   };
 
+  // Filter customers based on search term
+  const filteredCustomers = customers.filter((customer) =>
+    customer.name.toLowerCase().includes(customerSearchTerm.toLowerCase()) ||
+    (customer.phone && customer.phone.includes(customerSearchTerm))
+  );
+
+  // Get the display name for selected customer
+  const getSelectedCustomerName = () => {
+    if (selectedCustomer === "walk-in") return "Walk-in Customer";
+    const customer = customers.find((c) => c.id === selectedCustomer);
+    return customer ? customer.name : "Select Customer";
+  };
+
+  // Handle customer selection
+  const handleCustomerSelect = (customerId) => {
+    setSelectedCustomer(customerId);
+    setShowCustomerDropdown(false);
+    setCustomerSearchTerm("");
+  };
+
   const addToCart = () => {
     if (!selectedCategory || !selectedProduct || !quantityKg || parseFloat(quantityKg) <= 0) {
       toast.error("Please select category, product and enter valid quantity");
