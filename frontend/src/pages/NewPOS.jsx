@@ -21,12 +21,31 @@ const NewPOS = () => {
   const [customerSearchTerm, setCustomerSearchTerm] = useState("");
   const [showCustomerDropdown, setShowCustomerDropdown] = useState(false);
 
+  const customerDropdownRef = useRef(null);
   const API_URL = process.env.REACT_APP_BACKEND_URL || "http://localhost:8001";
 
   useEffect(() => {
     fetchCategories();
     fetchCustomers();
   }, []);
+
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (customerDropdownRef.current && !customerDropdownRef.current.contains(event.target)) {
+        setShowCustomerDropdown(false);
+        setCustomerSearchTerm("");
+      }
+    };
+
+    if (showCustomerDropdown) {
+      document.addEventListener("mousedown", handleClickOutside);
+    }
+
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, [showCustomerDropdown]);
 
   useEffect(() => {
     if (selectedCategory) {
