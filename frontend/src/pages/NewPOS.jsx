@@ -430,18 +430,74 @@ const NewPOS = () => {
             <CardContent className="space-y-4">
               <div>
                 <label className="block text-sm font-medium mb-2">Customer</label>
-                <select
-                  value={selectedCustomer}
-                  onChange={(e) => setSelectedCustomer(e.target.value)}
-                  className="w-full border rounded-lg px-3 py-2"
-                >
-                  <option value="walk-in">Walk-in Customer</option>
-                  {customers.map((customer) => (
-                    <option key={customer.id} value={customer.id}>
-                      {customer.name}
-                    </option>
-                  ))}
-                </select>
+                <div className="relative">
+                  <div
+                    onClick={() => setShowCustomerDropdown(!showCustomerDropdown)}
+                    className="w-full border rounded-lg px-3 py-2 cursor-pointer bg-white flex items-center justify-between hover:border-gray-400"
+                  >
+                    <span>{getSelectedCustomerName()}</span>
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                    </svg>
+                  </div>
+
+                  {showCustomerDropdown && (
+                    <div className="absolute z-50 w-full mt-1 bg-white border rounded-lg shadow-lg max-h-80 overflow-hidden">
+                      {/* Search Input */}
+                      <div className="p-2 border-b sticky top-0 bg-white">
+                        <div className="relative">
+                          <Search className="absolute left-3 top-2.5 h-4 w-4 text-gray-400" />
+                          <input
+                            type="text"
+                            placeholder="Search customers..."
+                            value={customerSearchTerm}
+                            onChange={(e) => setCustomerSearchTerm(e.target.value)}
+                            onClick={(e) => e.stopPropagation()}
+                            className="w-full pl-9 pr-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                            autoFocus
+                          />
+                        </div>
+                      </div>
+
+                      {/* Customer List */}
+                      <div className="max-h-60 overflow-y-auto">
+                        {/* Walk-in Customer Option */}
+                        <div
+                          onClick={() => handleCustomerSelect("walk-in")}
+                          className={`px-4 py-2 cursor-pointer hover:bg-emerald-50 ${
+                            selectedCustomer === "walk-in" ? "bg-emerald-100 font-semibold" : ""
+                          }`}
+                        >
+                          Walk-in Customer
+                        </div>
+
+                        {/* Filtered Customers */}
+                        {filteredCustomers.length > 0 ? (
+                          filteredCustomers.map((customer) => (
+                            <div
+                              key={customer.id}
+                              onClick={() => handleCustomerSelect(customer.id)}
+                              className={`px-4 py-2 cursor-pointer hover:bg-emerald-50 ${
+                                selectedCustomer === customer.id ? "bg-emerald-100 font-semibold" : ""
+                              }`}
+                            >
+                              <div className="flex justify-between items-center">
+                                <span>{customer.name}</span>
+                                {customer.phone && (
+                                  <span className="text-sm text-gray-500">{customer.phone}</span>
+                                )}
+                              </div>
+                            </div>
+                          ))
+                        ) : (
+                          <div className="px-4 py-3 text-gray-500 text-center">
+                            No customers found
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  )}
+                </div>
               </div>
 
               <div>
