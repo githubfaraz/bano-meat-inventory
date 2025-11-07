@@ -22,6 +22,7 @@ const NewPOS = () => {
   const [showCustomerDropdown, setShowCustomerDropdown] = useState(false);
   const [editingCartIndex, setEditingCartIndex] = useState(null);
   const [editPrice, setEditPrice] = useState("");
+  const [saleDate, setSaleDate] = useState(new Date().toISOString().split("T")[0]);
 
   const customerDropdownRef = useRef(null);
   const API_URL = process.env.REACT_APP_BACKEND_URL || "http://localhost:8001";
@@ -481,6 +482,7 @@ const NewPOS = () => {
         discount: parseFloat(totals.discountAmount),
         total: parseFloat(totals.total),
         payment_method: paymentMethod,
+        sale_date: saleDate,
       };
 
       await axios.post(`${API_URL}/api/pos-sales`, saleData, {
@@ -497,6 +499,7 @@ const NewPOS = () => {
       setSelectedCustomer("walk-in");
       setDiscount(0);
       setPaymentMethod("cash");
+      setSaleDate(new Date().toISOString().split("T")[0]);
       
     } catch (error) {
       toast.error(error.response?.data?.detail || "Failed to complete sale");
@@ -568,7 +571,7 @@ const NewPOS = () => {
                   </label>
                   <input
                     type="number"
-                    step="0.1"
+                    step="0.5"
                     value={quantityKg}
                     onChange={(e) => setQuantityKg(e.target.value)}
                     className="w-full border rounded-lg px-3 py-2"
@@ -577,6 +580,7 @@ const NewPOS = () => {
                         ? "e.g., 3 (packages)"
                         : "e.g., 2.5 (kg)"
                     }
+                    autoFocus={false}
                   />
                   <p className="text-xs text-gray-500 mt-1">
                     {selectedProduct && derivedProducts.find(p => p.id === selectedProduct)?.sale_unit === "package"
@@ -762,6 +766,19 @@ const NewPOS = () => {
                   <option value="card">Card</option>
                   <option value="upi">UPI</option>
                 </select>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium mb-2">
+                  Sale Date
+                </label>
+                <input
+                  type="date"
+                  value={saleDate}
+                  onChange={(e) => setSaleDate(e.target.value)}
+                  className="w-full border rounded-lg px-3 py-2"
+                  max={new Date().toISOString().split("T")[0]}
+                />
               </div>
             </CardContent>
           </Card>
