@@ -74,22 +74,14 @@ const InventoryManagement = () => {
       const token = localStorage.getItem("token");
       setError("");
       
-      const [purchasesRes, wasteRes, salesRes] = await Promise.all([
-        axios.get(`${API}/inventory-purchases?main_category_id=${categoryId}`, {
-          headers: { Authorization: `Bearer ${token}` },
-        }),
-        axios.get(`${API}/daily-waste-tracking?main_category_id=${categoryId}`, {
-          headers: { Authorization: `Bearer ${token}` },
-        }),
-        axios.get(`${API}/pos-sales?main_category_id=${categoryId}`, {
-          headers: { Authorization: `Bearer ${token}` },
-        }),
-      ]);
+      const purchasesRes = await axios.get(`${API}/inventory-purchases?main_category_id=${categoryId}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
 
       setDetailData({
         purchases: purchasesRes.data,
-        waste: wasteRes.data,
-        sales: salesRes.data,
+        waste: [],
+        sales: [],
       });
     } catch (error) {
       console.error("Error fetching detail data:", error);
@@ -473,189 +465,59 @@ const InventoryManagement = () => {
 
       <div className="bg-white rounded-lg shadow-md">
         <div className="flex border-b">
-          <button
-            onClick={() => setActiveTab("purchases")}
-            className={`flex-1 py-3 px-6 font-medium transition-colors ${
-              activeTab === "purchases"
-                ? "bg-emerald-500 text-white"
-                : "text-gray-600 hover:bg-gray-50"
-            }`}
-          >
-            📦 Purchase History
-          </button>
-          <button
-            onClick={() => setActiveTab("waste")}
-            className={`flex-1 py-3 px-6 font-medium transition-colors ${
-              activeTab === "waste"
-                ? "bg-emerald-500 text-white"
-                : "text-gray-600 hover:bg-gray-50"
-            }`}
-          >
-            🗑️ Waste History
-          </button>
-          <button
-            onClick={() => setActiveTab("sales")}
-            className={`flex-1 py-3 px-6 font-medium transition-colors ${
-              activeTab === "sales"
-                ? "bg-emerald-500 text-white"
-                : "text-gray-600 hover:bg-gray-50"
-            }`}
-          >
-            🛒 Sales History
-          </button>
+          <div className="flex-1 py-3 px-6 font-medium bg-emerald-500 text-white">
+            📦 Purchase History (View Only)
+          </div>
         </div>
 
         <div className="p-6">
-          {activeTab === "purchases" && (
-            <div className="space-y-4">
-              {detailData.purchases.length === 0 ? (
-                <p className="text-gray-500 text-center py-8">No purchase records</p>
-              ) : (
-                detailData.purchases.map((purchase) => (
-                  <div key={purchase.id} className="border rounded-lg p-4 hover:shadow-md transition-shadow">
-                    <div className="flex justify-between items-start">
-                      <div className="flex-1 grid grid-cols-2 md:grid-cols-4 gap-4">
-                        <div>
-                          <p className="text-sm text-gray-600">Vendor: {purchase.vendor_name || 'Unknown'}</p>
-                          <p className="text-sm font-medium mt-2">Total Weight</p>
-                          <p className="text-lg font-bold text-emerald-600">{purchase.total_weight_kg || 0} kg</p>
-                        </div>
-                        <div>
-                          <p className="text-sm font-medium">Remaining</p>
-                          <p className="text-lg font-bold text-blue-600">{purchase.remaining_weight_kg || 0} kg</p>
-                        </div>
-                        <div>
-                          <p className="text-sm font-medium">Total Pieces</p>
-                          <p className="text-lg font-bold">{purchase.total_pieces || 0}</p>
-                        </div>
-                        <div>
-                          <p className="text-sm font-medium">Remaining Pieces</p>
-                          <p className="text-lg font-bold">{purchase.remaining_pieces || 0}</p>
-                        </div>
-                        <div>
-                          <p className="text-sm font-medium">Cost/kg</p>
-                          <p className="text-lg font-bold">₹{purchase.cost_per_kg || 0}</p>
-                        </div>
-                        <div>
-                          <p className="text-sm font-medium">Total Cost</p>
-                          <p className="text-lg font-bold text-orange-600">₹{purchase.total_cost || 0}</p>
-                        </div>
-                        <div>
-                          <p className="text-sm font-medium">Purchase Date</p>
-                          <p className="text-sm text-gray-600">{new Date(purchase.purchase_date).toLocaleDateString()}</p>
-                          <p className="text-xs text-gray-400">{new Date(purchase.purchase_date).toLocaleTimeString()}</p>
-                        </div>
-                        <div>
-                          <p className="text-sm text-gray-500">Notes: {purchase.notes || '...'}</p>
-                        </div>
+          <div className="space-y-4">
+            {detailData.purchases.length === 0 ? (
+              <p className="text-gray-500 text-center py-8">No purchase records</p>
+            ) : (
+              detailData.purchases.map((purchase) => (
+                <div key={purchase.id} className="border rounded-lg p-4 hover:shadow-md transition-shadow">
+                  <div className="flex justify-between items-start">
+                    <div className="flex-1 grid grid-cols-2 md:grid-cols-4 gap-4">
+                      <div>
+                        <p className="text-sm text-gray-600">Vendor: {purchase.vendor_name || 'Unknown'}</p>
+                        <p className="text-sm font-medium mt-2">Total Weight</p>
+                        <p className="text-lg font-bold text-emerald-600">{purchase.total_weight_kg || 0} kg</p>
                       </div>
-                      <div className="text-right ml-4">
-                        {isAdmin && (
-                          <div className="flex gap-2">
-                            <button
-                              onClick={() => handleEditPurchase(purchase)}
-                              className="px-3 py-1 bg-blue-500 text-white rounded hover:bg-blue-600 text-sm"
-                            >
-                              Edit
-                            </button>
-                            <button
-                              onClick={() => handleDeletePurchase(purchase.id)}
-                              className="px-3 py-1 bg-red-500 text-white rounded hover:bg-red-600 text-sm"
-                            >
-                              Delete
-                            </button>
-                          </div>
-                        )}
+                      <div>
+                        <p className="text-sm font-medium">Remaining</p>
+                        <p className="text-lg font-bold text-blue-600">{purchase.remaining_weight_kg || 0} kg</p>
+                      </div>
+                      <div>
+                        <p className="text-sm font-medium">Total Pieces</p>
+                        <p className="text-lg font-bold">{purchase.total_pieces || 0}</p>
+                      </div>
+                      <div>
+                        <p className="text-sm font-medium">Remaining Pieces</p>
+                        <p className="text-lg font-bold">{purchase.remaining_pieces || 0}</p>
+                      </div>
+                      <div>
+                        <p className="text-sm font-medium">Cost/kg</p>
+                        <p className="text-lg font-bold">₹{purchase.cost_per_kg || 0}</p>
+                      </div>
+                      <div>
+                        <p className="text-sm font-medium">Total Cost</p>
+                        <p className="text-lg font-bold text-orange-600">₹{purchase.total_cost || 0}</p>
+                      </div>
+                      <div>
+                        <p className="text-sm font-medium">Purchase Date</p>
+                        <p className="text-sm text-gray-600">{new Date(purchase.purchase_date).toLocaleDateString()}</p>
+                        <p className="text-xs text-gray-400">{new Date(purchase.purchase_date).toLocaleTimeString()}</p>
+                      </div>
+                      <div>
+                        <p className="text-sm text-gray-500">Notes: {purchase.notes || '...'}</p>
                       </div>
                     </div>
                   </div>
-                ))
-              )}
-            </div>
-          )}
-
-          {activeTab === "waste" && (
-            <div className="space-y-4">
-              {detailData.waste.length === 0 ? (
-                <p className="text-gray-500 text-center py-8">No waste records</p>
-              ) : (
-                detailData.waste.map((waste) => (
-                  <div key={waste.id} className="border rounded-lg p-4 hover:shadow-md transition-shadow">
-                    <div className="flex justify-between items-start">
-                      <div className="flex-1 grid grid-cols-2 gap-4">
-                        <div>
-                          <p className="text-sm font-medium">Waste Amount</p>
-                          <p className="text-2xl font-bold text-red-600">{waste.waste_kg || 0} kg</p>
-                        </div>
-                        <div>
-                          <p className="text-sm font-medium">Deducted From</p>
-                          <p className="text-lg">Inventory Stock</p>
-                        </div>
-                      </div>
-                      <div className="text-right">
-                        <p className="text-sm font-medium">Date</p>
-                        <p className="text-sm text-gray-600">{new Date(waste.tracking_date).toLocaleDateString()}</p>
-                      </div>
-                    </div>
-                  </div>
-                ))
-              )}
-            </div>
-          )}
-
-          {activeTab === "sales" && (
-            <div className="space-y-4">
-              {detailData.sales.length === 0 ? (
-                <p className="text-gray-500 text-center py-8">No sales records</p>
-              ) : (
-                detailData.sales.map((sale) => (
-                  <div key={sale.id} className="border rounded-lg p-4 hover:shadow-md transition-shadow">
-                    <div className="flex justify-between items-start">
-                      <div className="flex-1">
-                        <p className="font-semibold text-lg">{sale.customer_name || 'Walk-in Customer'}</p>
-                        <p className="text-sm text-gray-600">{sale.payment_method?.toUpperCase()}</p>
-                        <div className="mt-2">
-                          {sale.items?.map((item, idx) => (
-                            <div key={idx} className="text-sm">
-                              <span className="font-medium">{item.derived_product_name || 'Unknown Product'}</span>
-                              <span className="text-gray-600 ml-2">
-                                {item.quantity_kg > 0
-                                  ? `${item.quantity_kg}kg × ₹${item.selling_price}/kg` 
-                                  : item.quantity_pieces 
-                                    ? `${item.quantity_pieces}pcs × ₹${item.selling_price}/pc`
-                                    : 'N/A'}
-                              </span>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                      <div className="text-right">
-                        <p className="text-2xl font-bold text-emerald-600">₹{sale.total}</p>
-                        <p className="text-sm text-gray-600">{new Date(sale.created_at).toLocaleDateString()}</p>
-                        <p className="text-xs text-gray-400">{new Date(sale.created_at).toLocaleTimeString()}</p>
-                        {isAdmin && (
-                          <div className="flex gap-2 mt-2 justify-end">
-                            <button
-                              onClick={() => handleEditSale(sale)}
-                              className="px-3 py-1 bg-blue-500 text-white rounded hover:bg-blue-600 text-sm"
-                            >
-                              Edit
-                            </button>
-                            <button
-                              onClick={() => handleDeleteSale(sale.id)}
-                              className="px-3 py-1 bg-red-500 text-white rounded hover:bg-red-600 text-sm"
-                            >
-                              Delete
-                            </button>
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                ))
-              )}
-            </div>
-          )}
+                </div>
+              ))
+            )}
+          </div>
         </div>
       </div>
 

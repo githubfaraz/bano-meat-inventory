@@ -10,6 +10,8 @@ const DailyPiecesTracking = () => {
   const [editingTracking, setEditingTracking] = useState(null);
   const [selectedCategory, setSelectedCategory] = useState("all");
   const [isAdmin, setIsAdmin] = useState(false);
+  const [startDate, setStartDate] = useState("");
+  const [endDate, setEndDate] = useState("");
   const [formData, setFormData] = useState({
     main_category_id: "",
     pieces_sold: "",
@@ -25,7 +27,7 @@ const DailyPiecesTracking = () => {
     if (categories.length > 0) {
       fetchTrackings();
     }
-  }, [selectedCategory, categories]);
+  }, [selectedCategory, categories, startDate, endDate]);
 
   const checkAdminStatus = () => {
     const userStr = localStorage.getItem("user");
@@ -55,10 +57,19 @@ const DailyPiecesTracking = () => {
   const fetchTrackings = async () => {
     try {
       const token = localStorage.getItem("token");
-      const url =
-        selectedCategory === "all"
-          ? `${API}/daily-pieces-tracking`
-          : `${API}/daily-pieces-tracking?main_category_id=${selectedCategory}`;
+      const params = new URLSearchParams();
+      
+      if (selectedCategory !== "all") {
+        params.append("main_category_id", selectedCategory);
+      }
+      if (startDate) {
+        params.append("start_date", startDate);
+      }
+      if (endDate) {
+        params.append("end_date", endDate);
+      }
+      
+      const url = `${API}/daily-pieces-tracking${params.toString() ? `?${params.toString()}` : ""}`;
       const response = await axios.get(url, {
         headers: { Authorization: `Bearer ${token}` },
       });
@@ -164,20 +175,55 @@ const DailyPiecesTracking = () => {
         </button>
       </div>
 
-      <div className="mb-6">
-        <label className="block text-sm font-medium mb-2">Filter by Category</label>
-        <select
-          value={selectedCategory}
-          onChange={(e) => setSelectedCategory(e.target.value)}
-          className="border rounded-lg px-4 py-2 w-64"
-        >
-          <option value="all">All Categories</option>
-          {categories.map((cat) => (
-            <option key={cat.id} value={cat.id}>
-              {cat.name}
-            </option>
-          ))}
-        </select>
+      <div className="mb-6 bg-white rounded-lg shadow-md p-4">
+        <div className="flex items-center gap-4 flex-wrap">
+          <div>
+            <label className="block text-sm font-medium mb-2">Filter by Category</label>
+            <select
+              value={selectedCategory}
+              onChange={(e) => setSelectedCategory(e.target.value)}
+              className="border rounded-lg px-4 py-2 w-64"
+            >
+              <option value="all">All Categories</option>
+              {categories.map((cat) => (
+                <option key={cat.id} value={cat.id}>
+                  {cat.name}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div>
+            <label className="block text-sm font-medium mb-2">From Date</label>
+            <input
+              type="date"
+              value={startDate}
+              onChange={(e) => setStartDate(e.target.value)}
+              className="border rounded-lg px-3 py-2"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium mb-2">To Date</label>
+            <input
+              type="date"
+              value={endDate}
+              onChange={(e) => setEndDate(e.target.value)}
+              className="border rounded-lg px-3 py-2"
+            />
+          </div>
+          {(startDate || endDate) && (
+            <div className="self-end">
+              <button
+                onClick={() => {
+                  setStartDate("");
+                  setEndDate("");
+                }}
+                className="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 text-sm"
+              >
+                Clear Dates
+              </button>
+            </div>
+          )}
+        </div>
       </div>
 
       <div className="bg-white rounded-lg shadow-md">

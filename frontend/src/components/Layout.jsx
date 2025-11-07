@@ -48,6 +48,7 @@ const Layout = ({ setAuth }) => {
     { path: "/main-categories", icon: List, label: "Main Categories", section: "inventory", adminOnly: true },
     { path: "/derived-products", icon: Box, label: "Derived Products", section: "inventory", adminOnly: true },
     { path: "/inventory-management", icon: Warehouse, label: "Inventory", section: "inventory" },
+    { path: "/purchase-history", icon: ShoppingBag, label: "Purchase", section: "inventory" },
     { path: "/daily-pieces-tracking", icon: PieChart, label: "Daily Pieces", section: "inventory" },
     { path: "/daily-waste-tracking", icon: Trash2, label: "Daily Waste", section: "inventory" },
     { path: "/new-pos", icon: ShoppingCart, label: "New POS", section: "inventory" },
