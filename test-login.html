@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Test Login</title>
+    <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+</head>
+<body>
+    <h1>Test Login</h1>
+    <button onclick="testLogin()">Test Login</button>
+    <div id="result"></div>
+
+    <script>
+        async function testLogin() {
+            const resultDiv = document.getElementById('result');
+            resultDiv.innerHTML = 'Testing...';
+            
+            try {
+                console.log('Starting login test...');
+                const response = await axios.post('https://bano-fresh-meat.preview.emergentagent.com/api/auth/login', {
+                    username: 'admin-bano',
+                    password: 'India@54321'
+                }, {
+                    timeout: 10000
+                });
+                
+                console.log('Response:', response.data);
+                resultDiv.innerHTML = `
+                    <h2 style="color: green;">SUCCESS!</h2>
+                    <p>Token: ${response.data.access_token.substring(0, 50)}...</p>
+                    <p>User: ${response.data.user.username}</p>
+                `;
+            } catch (error) {
+                console.error('Error:', error);
+                resultDiv.innerHTML = `
+                    <h2 style="color: red;">FAILED!</h2>
+                    <p>Error: ${error.message}</p>
+                    <p>Response: ${error.response ? JSON.stringify(error.response.data) : 'No response'}</p>
+                `;
+            }
+        }
+    </script>
+</body>
+</html>

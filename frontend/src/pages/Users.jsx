@@ -21,8 +21,21 @@ const Users = () => {
     is_admin: false,
   });
 
-  // Check if current user is admin
-  const currentUser = JSON.parse(localStorage.getItem("user") || "{}");
+  // Check if current user is admin with safe parsing
+  const getUserFromStorage = () => {
+    try {
+      const userStr = localStorage.getItem("user");
+      if (!userStr || userStr === "undefined" || userStr === "null") {
+        return {};
+      }
+      return JSON.parse(userStr);
+    } catch (error) {
+      console.error("Error parsing user from localStorage:", error);
+      return {};
+    }
+  };
+  
+  const currentUser = getUserFromStorage();
   const isAdmin = currentUser?.is_admin || false;
 
   useEffect(() => {

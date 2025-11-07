@@ -15,7 +15,10 @@ const Sales = () => {
 
   const fetchSales = async () => {
     try {
-      const response = await axios.get(`${API}/sales`);
+      const token = localStorage.getItem("token");
+      const response = await axios.get(`${API}/pos-sales`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
       setSales(response.data);
     } catch (error) {
       toast.error("Failed to fetch sales");
@@ -84,9 +87,9 @@ const Sales = () => {
                     className="flex justify-between items-center py-2 px-3 bg-gray-50 rounded"
                   >
                     <div>
-                      <p className="font-medium">{item.product_name}</p>
+                      <p className="font-medium">{item.derived_product_name}</p>
                       <p className="text-sm text-gray-600">
-                        {item.quantity} {item.unit} × ₹{item.price_per_unit.toFixed(2)}
+                        {item.main_category_name} • {item.quantity_kg}kg × ₹{item.selling_price.toFixed(2)}/kg
                       </p>
                     </div>
                     <p className="font-semibold">₹{item.total.toFixed(2)}</p>
