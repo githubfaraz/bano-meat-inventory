@@ -281,21 +281,29 @@ const Sales = () => {
               <div className="space-y-2">
                 <Label htmlFor="customer">Customer</Label>
                 <Select
-                  value={editFormData.customer_id}
+                  value={editFormData.customer_id || "walk-in"}
                   onValueChange={(value) => {
-                    const customer = customers.find(c => c.id === value);
-                    setEditFormData({
-                      ...editFormData,
-                      customer_id: value,
-                      customer_name: customer ? customer.name : ""
-                    });
+                    if (value === "walk-in") {
+                      setEditFormData({
+                        ...editFormData,
+                        customer_id: "",
+                        customer_name: ""
+                      });
+                    } else {
+                      const customer = customers.find(c => c.id === value);
+                      setEditFormData({
+                        ...editFormData,
+                        customer_id: value,
+                        customer_name: customer ? customer.name : ""
+                      });
+                    }
                   }}
                 >
                   <SelectTrigger>
                     <SelectValue placeholder="Walk-in Customer" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">Walk-in Customer</SelectItem>
+                    <SelectItem value="walk-in">Walk-in Customer</SelectItem>
                     {customers.map((customer) => (
                       <SelectItem key={customer.id} value={customer.id}>
                         {customer.name}
