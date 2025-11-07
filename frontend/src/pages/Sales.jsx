@@ -35,7 +35,7 @@ const Sales = () => {
 
   const fetchSales = async () => {
     try {
-      const response = await axios.get(`${API}/sales`);
+      const response = await axios.get(`${API}/pos-sales`);
       setSales(response.data);
     } catch (error) {
       toast.error("Failed to fetch sales");
@@ -101,7 +101,7 @@ const Sales = () => {
         sale_date: editFormData.sale_date
       };
 
-      await axios.put(`${API}/sales/${editingSale.id}`, saleData);
+      await axios.put(`${API}/pos-sales/${editingSale.id}`, saleData);
       toast.success("Sale updated successfully");
       fetchSales();
       setEditDialogOpen(false);
