@@ -19,6 +19,7 @@ const POS = () => {
   const [discount, setDiscount] = useState(0);
   const [taxRate, setTaxRate] = useState(5);
   const [paymentMethod, setPaymentMethod] = useState("cash");
+  const [saleDate, setSaleDate] = useState(new Date().toISOString().split('T')[0]);
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
@@ -126,6 +127,7 @@ const POS = () => {
         discount: discountAmount,
         total,
         payment_method: paymentMethod,
+        sale_date: saleDate,
       };
 
       const response = await axios.post(`${API}/sales`, saleData);
@@ -139,6 +141,7 @@ const POS = () => {
       setSelectedCustomer("walk-in");
       setDiscount(0);
       setPaymentMethod("cash");
+      setSaleDate(new Date().toISOString().split('T')[0]);
       fetchProducts();
     } catch (error) {
       toast.error(error.response?.data?.detail || "Failed to complete sale");
@@ -293,7 +296,7 @@ const POS = () => {
                   <div className="flex gap-2">
                     <Input
                       type="number"
-                      step="0.01"
+                      step="0.5"
                       placeholder="Qty"
                       value={quantity}
                       onChange={(e) => setQuantity(e.target.value)}
@@ -416,6 +419,16 @@ const POS = () => {
                     <SelectItem value="upi">UPI</SelectItem>
                   </SelectContent>
                 </Select>
+              </div>
+
+              <div className="space-y-2">
+                <Label>Sale Date</Label>
+                <Input
+                  type="date"
+                  value={saleDate}
+                  onChange={(e) => setSaleDate(e.target.value)}
+                  data-testid="pos-sale-date-input"
+                />
               </div>
 
               <div className="pt-4 border-t space-y-2">

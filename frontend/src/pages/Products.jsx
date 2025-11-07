@@ -31,6 +31,21 @@ const Products = () => {
 
   useEffect(() => {
     fetchProducts();
+    
+    const handleFocus = () => {
+      fetchProducts();
+    };
+    
+    window.addEventListener('focus', handleFocus);
+    document.addEventListener('visibilitychange', () => {
+      if (!document.hidden) {
+        fetchProducts();
+      }
+    });
+    
+    return () => {
+      window.removeEventListener('focus', handleFocus);
+    };
   }, []);
 
   const fetchProducts = async () => {
@@ -148,7 +163,7 @@ const Products = () => {
               Add Product
             </Button>
           </DialogTrigger>
-          <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto" onOpenAutoFocus={(e) => e.preventDefault()} onCloseAutoFocus={(e) => e.preventDefault()}>
             <DialogHeader>
               <DialogTitle>{editingProduct ? "Edit Product" : "Add New Product"}</DialogTitle>
             </DialogHeader>
@@ -224,7 +239,7 @@ const Products = () => {
                   <Input
                     id="stock"
                     type="number"
-                    step="0.01"
+                    step="0.5"
                     value={formData.stock_quantity}
                     onChange={(e) => setFormData({ ...formData, stock_quantity: e.target.value })}
                     required
@@ -236,7 +251,7 @@ const Products = () => {
                   <Input
                     id="reorder"
                     type="number"
-                    step="0.01"
+                    step="0.5"
                     value={formData.reorder_level}
                     onChange={(e) => setFormData({ ...formData, reorder_level: e.target.value })}
                     required

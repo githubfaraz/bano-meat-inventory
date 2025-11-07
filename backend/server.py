@@ -773,7 +773,17 @@ async def create_sale(
                 {"id": sale_input.customer_id}, {"$set": {"total_purchases": new_total}}
             )
 
-    sale = Sale(**sale_input.model_dump(), created_by=current_user.id)
+    sale_data = sale_input.model_dump()
+    
+    created_at = datetime.now()
+    if hasattr(sale_input, 'sale_date') and sale_input.sale_date:
+        created_at = datetime.fromisoformat(sale_input.sale_date)
+    
+    sale = Sale(
+        **sale_data,
+        created_by=current_user.id,
+        created_at=created_at
+    )
     doc = sale.model_dump()
     doc["created_at"] = doc["created_at"].isoformat()
     doc["items"] = [item.model_dump() for item in sale.items]
@@ -802,7 +812,99 @@ async def get_sale(sale_id: str, current_user: User = Depends(get_current_user))
     sale["items"] = [SaleItem(**item) for item in sale["items"]]
     return Sale(**sale)
 
+<<<<<<< HEAD
 
+||||||| parent of 4e9e17f (Fix inventory issues: input focus, step increments, edit functionality, and backdating)
+=======
+@api_router.put("/sales/{sale_id}", response_model=Sale)
+async def update_sale(sale_id: str, sale_input: SaleCreate, current_user: User = Depends(get_current_user)):
+    existing_sale = await db.sales.find_one({"id": sale_id})
+    if not existing_sale:
+        raise HTTPException(status_code=404, detail="Sale not found")
+    
+    old_items = {item['product_id']: item['quantity'] for item in existing_sale['items']}
+    new_items = {item.product_id: item.quantity for item in sale_input.items}
+    
+    for product_id, new_qty in new_items.items():
+        old_qty = old_items.get(product_id, 0)
+        qty_delta = new_qty - old_qty
+        
+        if qty_delta != 0:
+            product = await db.products.find_one({"id": product_id})
+            if not product:
+                raise HTTPException(status_code=404, detail=f"Product {product_id} not found")
+            
+            new_stock = product['stock_quantity'] - qty_delta
+            if new_stock < 0:
+                raise HTTPException(status_code=400, detail=f"Insufficient stock for product {product['name']}. Available: {product['stock_quantity']}, Required: {qty_delta}")
+            
+            await db.products.update_one(
+                {"id": product_id},
+                {"$set": {"stock_quantity": new_stock}}
+            )
+    
+    for product_id, old_qty in old_items.items():
+        if product_id not in new_items:
+            await db.products.update_one(
+                {"id": product_id},
+                {"$inc": {"stock_quantity": old_qty}}
+            )
+    
+    if existing_sale.get('customer_id') and existing_sale['customer_id'] == sale_input.customer_id:
+        old_total = existing_sale['total']
+        total_delta = sale_input.total - old_total
+        if total_delta != 0:
+            await db.customers.update_one(
+                {"id": sale_input.customer_id},
+                {"$inc": {"total_purchases": total_delta}}
+            )
+    elif existing_sale.get('customer_id') and existing_sale['customer_id'] != sale_input.customer_id:
+        await db.customers.update_one(
+            {"id": existing_sale['customer_id']},
+            {"$inc": {"total_purchases": -existing_sale['total']}}
+        )
+        if sale_input.customer_id:
+            await db.customers.update_one(
+                {"id": sale_input.customer_id},
+                {"$inc": {"total_purchases": sale_input.total}}
+            )
+    elif not existing_sale.get('customer_id') and sale_input.customer_id:
+        await db.customers.update_one(
+            {"id": sale_input.customer_id},
+            {"$inc": {"total_purchases": sale_input.total}}
+        )
+    
+    created_at = datetime.now()
+    if hasattr(sale_input, 'sale_date') and sale_input.sale_date:
+        created_at = datetime.fromisoformat(sale_input.sale_date)
+    elif existing_sale.get('created_at'):
+        if isinstance(existing_sale['created_at'], str):
+            created_at = datetime.fromisoformat(existing_sale['created_at'])
+        else:
+            created_at = existing_sale['created_at']
+    
+    update_data = {
+        "customer_id": sale_input.customer_id,
+        "customer_name": sale_input.customer_name,
+        "items": [item.model_dump() for item in sale_input.items],
+        "subtotal": sale_input.subtotal,
+        "discount": sale_input.discount,
+        "tax": sale_input.tax,
+        "total": sale_input.total,
+        "payment_method": sale_input.payment_method,
+        "created_at": created_at.isoformat()
+    }
+    
+    await db.sales.update_one({"id": sale_id}, {"$set": update_data})
+    
+    updated_sale = await db.sales.find_one({"id": sale_id}, {"_id": 0})
+    if isinstance(updated_sale.get('created_at'), str):
+        updated_sale['created_at'] = datetime.fromisoformat(updated_sale['created_at'])
+    updated_sale['items'] = [SaleItem(**item) for item in updated_sale['items']]
+    
+    return Sale(**updated_sale)
+
+>>>>>>> 4e9e17f (Fix inventory issues: input focus, step increments, edit functionality, and backdating)
 # ========== DASHBOARD ==========
 
 
@@ -924,7 +1026,69 @@ async def get_purchases(current_user: User = Depends(get_current_user)):
             p["purchase_date"] = datetime.fromisoformat(p["purchase_date"])
     return purchases
 
+<<<<<<< HEAD
 
+||||||| parent of 4e9e17f (Fix inventory issues: input focus, step increments, edit functionality, and backdating)
+=======
+@api_router.put("/purchases/{purchase_id}")
+async def update_purchase(purchase_id: str, purchase_input: PurchaseCreate, current_user: User = Depends(get_current_user)):
+    existing_purchase = await db.purchases.find_one({"id": purchase_id})
+    if not existing_purchase:
+        raise HTTPException(status_code=404, detail="Purchase not found")
+    
+    old_quantity = existing_purchase['quantity']
+    old_raw_material_id = existing_purchase['raw_material_id']
+    new_quantity = purchase_input.quantity
+    new_raw_material_id = purchase_input.raw_material_id
+    
+    if old_raw_material_id == new_raw_material_id:
+        quantity_delta = new_quantity - old_quantity
+        if quantity_delta != 0:
+            result = await db.products.update_one(
+                {"id": new_raw_material_id},
+                {"$inc": {"stock_quantity": quantity_delta}}
+            )
+            if result.matched_count == 0:
+                raise HTTPException(status_code=404, detail="Raw material not found")
+    else:
+        await db.products.update_one(
+            {"id": old_raw_material_id},
+            {"$inc": {"stock_quantity": -old_quantity}}
+        )
+        result = await db.products.update_one(
+            {"id": new_raw_material_id},
+            {"$inc": {"stock_quantity": new_quantity}}
+        )
+        if result.matched_count == 0:
+            raise HTTPException(status_code=404, detail="New raw material not found")
+    
+    await db.products.update_one(
+        {"id": new_raw_material_id},
+        {"$set": {"purchase_cost": purchase_input.cost_per_unit}}
+    )
+    
+    purchase_date = datetime.now()
+    if purchase_input.purchase_date:
+        purchase_date = datetime.fromisoformat(purchase_input.purchase_date)
+    
+    update_data = {
+        "vendor_id": purchase_input.vendor_id,
+        "raw_material_id": purchase_input.raw_material_id,
+        "quantity": purchase_input.quantity,
+        "cost_per_unit": purchase_input.cost_per_unit,
+        "total_cost": purchase_input.total_cost,
+        "purchase_date": purchase_date.isoformat()
+    }
+    
+    await db.purchases.update_one({"id": purchase_id}, {"$set": update_data})
+    
+    updated_purchase = await db.purchases.find_one({"id": purchase_id}, {"_id": 0})
+    if isinstance(updated_purchase.get('purchase_date'), str):
+        updated_purchase['purchase_date'] = datetime.fromisoformat(updated_purchase['purchase_date'])
+    
+    return Purchase(**updated_purchase)
+
+>>>>>>> 4e9e17f (Fix inventory issues: input focus, step increments, edit functionality, and backdating)
 @api_router.delete("/purchases/{purchase_id}")
 async def delete_purchase(
     purchase_id: str, current_user: User = Depends(get_current_user)
