@@ -339,12 +339,13 @@ const DailyWasteTracking = () => {
                 <input
                   type="number"
                   required
-                  step="0.01"
+                  step="0.5"
                   min="0.01"
                   value={formData.waste_kg}
                   onChange={(e) => setFormData({ ...formData, waste_kg: e.target.value })}
                   className="w-full border rounded-lg px-3 py-2"
                   placeholder="Enter waste in kg"
+                  autoFocus={false}
                 />
               </div>
               <div>
@@ -397,11 +398,12 @@ const DailyWasteTracking = () => {
                 <label className="block text-sm font-medium mb-2">Waste Weight (kg) *</label>
                 <input
                   type="number"
-                  step="0.01"
+                  step="0.5"
                   min="0.01"
                   value={editingTracking.waste_kg}
                   onChange={(e) => setEditingTracking({ ...editingTracking, waste_kg: parseFloat(e.target.value) })}
                   className="w-full border rounded-lg px-3 py-2"
+                  autoFocus={false}
                 />
               </div>
               <div>
