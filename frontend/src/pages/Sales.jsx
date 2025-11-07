@@ -2,51 +2,40 @@ import { useEffect, useState } from "react";
 import axios from "axios";
 import { API } from "@/App";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
-import { TrendingUp, Calendar, Filter } from "lucide-react";
+import { TrendingUp, Calendar, Edit, Trash2, Plus } from "lucide-react";
 
 const Sales = () => {
   const [sales, setSales] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [isAdmin, setIsAdmin] = useState(false);
+  const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [editingSale, setEditingSale] = useState(null);
-  const [startDate, setStartDate] = useState("");
-  const [endDate, setEndDate] = useState("");
+  const [products, setProducts] = useState([]);
+  const [customers, setCustomers] = useState([]);
+  const [editFormData, setEditFormData] = useState({
+    customer_id: "",
+    customer_name: "",
+    items: [],
+    discount: 0,
+    tax: 0,
+    payment_method: "cash",
+    sale_date: ""
+  });
 
   useEffect(() => {
-    checkAdminStatus();
     fetchSales();
+    fetchProducts();
+    fetchCustomers();
   }, []);
 
-  const checkAdminStatus = () => {
+  const fetchSales = async () => {
     try {
-      const userStr = localStorage.getItem("user");
-      if (userStr) {
-        const user = JSON.parse(userStr);
-        setIsAdmin(user.is_admin || false);
-      }
-    } catch (error) {
-      console.error("Error checking admin status:", error);
-      setIsAdmin(false);
-    }
-  };
-
-  const fetchSales = async (filters = {}) => {
-    try {
-      const token = localStorage.getItem("token");
-      let url = `${API}/pos-sales`;
-      const params = new URLSearchParams();
-      
-      if (filters.start_date) params.append("start_date", filters.start_date);
-      if (filters.end_date) params.append("end_date", filters.end_date);
-      
-      if (params.toString()) {
-        url += `?${params.toString()}`;
-      }
-      
-      const response = await axios.get(url, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      const response = await axios.get(`${API}/sales`);
       setSales(response.data);
     } catch (error) {
       toast.error("Failed to fetch sales");
@@ -55,65 +44,115 @@ const Sales = () => {
     }
   };
 
-  const handleFilter = () => {
-    if (startDate && endDate && startDate > endDate) {
-      toast.error("Start date must be before end date");
-      return;
+  const fetchProducts = async () => {
+    try {
+      const response = await axios.get(`${API}/products`);
+      setProducts(response.data);
+    } catch (error) {
+      toast.error("Failed to fetch products");
     }
-    fetchSales({ start_date: startDate, end_date: endDate });
   };
 
-  const handleClearFilter = () => {
-    setStartDate("");
-    setEndDate("");
-    fetchSales();
+  const fetchCustomers = async () => {
+    try {
+      const response = await axios.get(`${API}/customers`);
+      setCustomers(response.data);
+    } catch (error) {
+      toast.error("Failed to fetch customers");
+    }
   };
 
   const handleEditSale = (sale) => {
-    setEditingSale({
-      ...sale,
-      payment_method: sale.payment_method || "cash",
-      discount: sale.discount || 0,
-      tax: sale.tax || 0,
+    setEditingSale(sale);
+    setEditFormData({
+      customer_id: sale.customer_id || "",
+      customer_name: sale.customer_name || "",
+      items: sale.items.map(item => ({
+        product_id: item.product_id,
+        product_name: item.product_name,
+        quantity: item.quantity,
+        price_per_unit: item.price_per_unit,
+        unit: item.unit,
+        total: item.total
+      })),
+      discount: sale.discount,
+      tax: sale.tax,
+      payment_method: sale.payment_method,
+      sale_date: new Date(sale.created_at).toISOString().split('T')[0]
     });
+    setEditDialogOpen(true);
   };
 
-  const handleSaveEdit = async () => {
+  const handleUpdateSale = async (e) => {
+    e.preventDefault();
     try {
-      const token = localStorage.getItem("token");
-      await axios.put(
-        `${API}/pos-sales/${editingSale.id}`,
-        {
-          payment_method: editingSale.payment_method,
-          discount: editingSale.discount,
-          tax: editingSale.tax,
-        },
-        {
-          headers: { Authorization: `Bearer ${token}` },
-        }
-      );
+      const subtotal = editFormData.items.reduce((sum, item) => sum + item.total, 0);
+      const total = subtotal - editFormData.discount + editFormData.tax;
+
+      const saleData = {
+        customer_id: editFormData.customer_id || null,
+        customer_name: editFormData.customer_name || null,
+        items: editFormData.items,
+        subtotal,
+        discount: parseFloat(editFormData.discount),
+        tax: parseFloat(editFormData.tax),
+        total,
+        payment_method: editFormData.payment_method,
+        sale_date: editFormData.sale_date
+      };
+
+      await axios.put(`${API}/sales/${editingSale.id}`, saleData);
       toast.success("Sale updated successfully");
+      fetchSales();
+      setEditDialogOpen(false);
       setEditingSale(null);
-      fetchSales({ start_date: startDate, end_date: endDate });
     } catch (error) {
       toast.error(error.response?.data?.detail || "Failed to update sale");
     }
   };
 
-  const handleDeleteSale = async (saleId) => {
-    if (!window.confirm("Are you sure you want to delete this sale? This will restore the inventory.")) {
-      return;
+  const handleItemChange = (index, field, value) => {
+    const newItems = [...editFormData.items];
+    newItems[index][field] = field === 'quantity' || field === 'price_per_unit' ? parseFloat(value) || 0 : value;
+    
+    if (field === 'quantity' || field === 'price_per_unit') {
+      newItems[index].total = newItems[index].quantity * newItems[index].price_per_unit;
     }
+    
+    setEditFormData({ ...editFormData, items: newItems });
+  };
 
-    try {
-      const token = localStorage.getItem("token");
-      await axios.delete(`${API}/pos-sales/${saleId}`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      toast.success("Sale deleted successfully");
-      fetchSales({ start_date: startDate, end_date: endDate });
-    } catch (error) {
-      toast.error(error.response?.data?.detail || "Failed to delete sale");
+  const handleRemoveItem = (index) => {
+    const newItems = editFormData.items.filter((_, i) => i !== index);
+    setEditFormData({ ...editFormData, items: newItems });
+  };
+
+  const handleAddItem = () => {
+    setEditFormData({
+      ...editFormData,
+      items: [...editFormData.items, {
+        product_id: "",
+        product_name: "",
+        quantity: 0,
+        price_per_unit: 0,
+        unit: "kg",
+        total: 0
+      }]
+    });
+  };
+
+  const handleProductSelect = (index, productId) => {
+    const product = products.find(p => p.id === productId);
+    if (product) {
+      const newItems = [...editFormData.items];
+      newItems[index] = {
+        ...newItems[index],
+        product_id: product.id,
+        product_name: product.name,
+        price_per_unit: product.price_per_unit,
+        unit: product.unit
+      };
+      setEditFormData({ ...editFormData, items: newItems });
     }
   };
 
@@ -131,50 +170,6 @@ const Sales = () => {
         </h1>
         <p className="text-gray-600">View all transactions</p>
       </div>
-
-      {/* Date Filter */}
-      <Card className="mb-6">
-        <CardContent className="pt-6">
-          <div className="flex items-center gap-4 flex-wrap">
-            <div className="flex items-center gap-2">
-              <Filter className="h-5 w-5 text-gray-600" />
-              <span className="font-medium text-gray-700">Filter by Date:</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <label className="text-sm text-gray-600">From:</label>
-              <input
-                type="date"
-                value={startDate}
-                onChange={(e) => setStartDate(e.target.value)}
-                className="border rounded-lg px-3 py-2 text-sm"
-              />
-            </div>
-            <div className="flex items-center gap-2">
-              <label className="text-sm text-gray-600">To:</label>
-              <input
-                type="date"
-                value={endDate}
-                onChange={(e) => setEndDate(e.target.value)}
-                className="border rounded-lg px-3 py-2 text-sm"
-              />
-            </div>
-            <button
-              onClick={handleFilter}
-              className="px-4 py-2 bg-emerald-500 text-white rounded-lg hover:bg-emerald-600 text-sm"
-            >
-              Apply Filter
-            </button>
-            {(startDate || endDate) && (
-              <button
-                onClick={handleClearFilter}
-                className="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 text-sm"
-              >
-                Clear Filter
-              </button>
-            )}
-          </div>
-        </CardContent>
-      </Card>
 
       {/* Revenue Card */}
       <Card className="mb-6 bg-gradient-to-br from-emerald-50 to-teal-50 border-emerald-200">
@@ -206,25 +201,14 @@ const Sales = () => {
                     {new Date(sale.created_at).toLocaleString()}
                   </div>
                 </div>
-                <div className="text-right">
-                  <p className="text-2xl font-bold text-emerald-600">₹{sale.total.toFixed(2)}</p>
-                  <p className="text-xs text-gray-500 mt-1">{sale.payment_method.toUpperCase()}</p>
-                  {isAdmin && (
-                    <div className="flex gap-2 mt-2 justify-end">
-                      <button
-                        onClick={() => handleEditSale(sale)}
-                        className="px-3 py-1 bg-blue-500 text-white rounded hover:bg-blue-600 text-sm"
-                      >
-                        Edit
-                      </button>
-                      <button
-                        onClick={() => handleDeleteSale(sale.id)}
-                        className="px-3 py-1 bg-red-500 text-white rounded hover:bg-red-600 text-sm"
-                      >
-                        Delete
-                      </button>
-                    </div>
-                  )}
+                <div className="flex items-center gap-4">
+                  <div className="text-right">
+                    <p className="text-2xl font-bold text-emerald-600">₹{sale.total.toFixed(2)}</p>
+                    <p className="text-xs text-gray-500 mt-1">{sale.payment_method.toUpperCase()}</p>
+                  </div>
+                  <Button variant="ghost" size="icon" onClick={() => handleEditSale(sale)} data-testid={`edit-sale-${sale.id}`}>
+                    <Edit className="h-4 w-4" />
+                  </Button>
                 </div>
               </div>
             </CardHeader>
@@ -237,9 +221,9 @@ const Sales = () => {
                     className="flex justify-between items-center py-2 px-3 bg-gray-50 rounded"
                   >
                     <div>
-                      <p className="font-medium">{item.derived_product_name}</p>
+                      <p className="font-medium">{item.product_name}</p>
                       <p className="text-sm text-gray-600">
-                        {item.main_category_name} • {item.quantity_kg}kg × ₹{item.selling_price.toFixed(2)}/kg
+                        {item.quantity} {item.unit} × ₹{item.price_per_unit.toFixed(2)}
                       </p>
                     </div>
                     <p className="font-semibold">₹{item.total.toFixed(2)}</p>
@@ -274,70 +258,184 @@ const Sales = () => {
         </div>
       )}
 
-      {/* Edit Sale Dialog */}
-      {editingSale && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
-            <h3 className="text-xl font-bold mb-4">Edit Sale</h3>
-            <div className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium mb-2">Payment Method</label>
-                <select
-                  value={editingSale.payment_method}
-                  onChange={(e) => setEditingSale({ ...editingSale, payment_method: e.target.value })}
-                  className="w-full border rounded-lg px-3 py-2"
+      <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto" onOpenAutoFocus={(e) => e.preventDefault()} onCloseAutoFocus={(e) => e.preventDefault()}>
+          <DialogHeader>
+            <DialogTitle>Edit Sale</DialogTitle>
+          </DialogHeader>
+          <form onSubmit={handleUpdateSale} className="space-y-4">
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="customer">Customer</Label>
+                <Select
+                  value={editFormData.customer_id}
+                  onValueChange={(value) => {
+                    const customer = customers.find(c => c.id === value);
+                    setEditFormData({
+                      ...editFormData,
+                      customer_id: value,
+                      customer_name: customer ? customer.name : ""
+                    });
+                  }}
                 >
-                  <option value="cash">Cash</option>
-                  <option value="card">Card</option>
-                  <option value="upi">UPI</option>
-                </select>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Walk-in Customer" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="">Walk-in Customer</SelectItem>
+                    {customers.map((customer) => (
+                      <SelectItem key={customer.id} value={customer.id}>
+                        {customer.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
-              <div>
-                <label className="block text-sm font-medium mb-2">Discount (₹)</label>
-                <input
-                  type="number"
-                  step="0.01"
-                  value={editingSale.discount}
-                  onChange={(e) => setEditingSale({ ...editingSale, discount: parseFloat(e.target.value) || 0 })}
-                  className="w-full border rounded-lg px-3 py-2"
+
+              <div className="space-y-2">
+                <Label htmlFor="sale_date">Sale Date</Label>
+                <Input
+                  id="sale_date"
+                  type="date"
+                  value={editFormData.sale_date}
+                  onChange={(e) => setEditFormData({ ...editFormData, sale_date: e.target.value })}
                 />
-              </div>
-              <div>
-                <label className="block text-sm font-medium mb-2">Tax (₹)</label>
-                <input
-                  type="number"
-                  step="0.01"
-                  value={editingSale.tax}
-                  onChange={(e) => setEditingSale({ ...editingSale, tax: parseFloat(e.target.value) || 0 })}
-                  className="w-full border rounded-lg px-3 py-2"
-                />
-              </div>
-              <div className="bg-gray-50 p-3 rounded">
-                <p className="text-sm text-gray-600">Subtotal: ₹{editingSale.subtotal.toFixed(2)}</p>
-                <p className="text-sm text-gray-600">Discount: -₹{editingSale.discount.toFixed(2)}</p>
-                <p className="text-sm text-gray-600">Tax: +₹{editingSale.tax.toFixed(2)}</p>
-                <p className="text-lg font-bold text-emerald-600 mt-2">
-                  New Total: ₹{(editingSale.subtotal - editingSale.discount + editingSale.tax).toFixed(2)}
-                </p>
-              </div>
-              <div className="flex gap-2 justify-end">
-                <button
-                  onClick={() => setEditingSale(null)}
-                  className="px-4 py-2 border rounded-lg hover:bg-gray-50"
-                >
-                  Cancel
-                </button>
-                <button
-                  onClick={handleSaveEdit}
-                  className="px-4 py-2 bg-emerald-500 text-white rounded-lg hover:bg-emerald-600"
-                >
-                  Save Changes
-                </button>
               </div>
             </div>
-          </div>
-        </div>
-      )}
+
+            <div className="space-y-2">
+              <div className="flex justify-between items-center">
+                <Label>Items</Label>
+                <Button type="button" size="sm" onClick={handleAddItem}>
+                  <Plus className="h-4 w-4 mr-1" />
+                  Add Item
+                </Button>
+              </div>
+              
+              {editFormData.items.map((item, index) => (
+                <div key={index} className="border p-3 rounded space-y-2">
+                  <div className="grid grid-cols-5 gap-2">
+                    <div className="col-span-2">
+                      <Label>Product</Label>
+                      <Select
+                        value={item.product_id}
+                        onValueChange={(value) => handleProductSelect(index, value)}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select product" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {products.map((product) => (
+                            <SelectItem key={product.id} value={product.id}>
+                              {product.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    
+                    <div>
+                      <Label>Quantity</Label>
+                      <Input
+                        type="number"
+                        step="0.5"
+                        value={item.quantity}
+                        onChange={(e) => handleItemChange(index, 'quantity', e.target.value)}
+                      />
+                    </div>
+                    
+                    <div>
+                      <Label>Price/Unit</Label>
+                      <Input
+                        type="number"
+                        step="0.01"
+                        value={item.price_per_unit}
+                        onChange={(e) => handleItemChange(index, 'price_per_unit', e.target.value)}
+                      />
+                    </div>
+                    
+                    <div className="flex items-end">
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => handleRemoveItem(index)}
+                      >
+                        <Trash2 className="h-4 w-4 text-red-600" />
+                      </Button>
+                    </div>
+                  </div>
+                  <div className="text-sm text-gray-600">
+                    Total: ₹{item.total.toFixed(2)}
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            <div className="grid grid-cols-3 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="discount">Discount (₹)</Label>
+                <Input
+                  id="discount"
+                  type="number"
+                  step="0.01"
+                  value={editFormData.discount}
+                  onChange={(e) => setEditFormData({ ...editFormData, discount: e.target.value })}
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="tax">Tax (₹)</Label>
+                <Input
+                  id="tax"
+                  type="number"
+                  step="0.01"
+                  value={editFormData.tax}
+                  onChange={(e) => setEditFormData({ ...editFormData, tax: e.target.value })}
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="payment_method">Payment Method</Label>
+                <Select
+                  value={editFormData.payment_method}
+                  onValueChange={(value) => setEditFormData({ ...editFormData, payment_method: value })}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="cash">Cash</SelectItem>
+                    <SelectItem value="card">Card</SelectItem>
+                    <SelectItem value="upi">UPI</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
+            <div className="pt-4 border-t">
+              <div className="text-right space-y-1">
+                <p className="text-sm text-gray-600">
+                  Subtotal: ₹{editFormData.items.reduce((sum, item) => sum + item.total, 0).toFixed(2)}
+                </p>
+                <p className="text-sm text-gray-600">
+                  Discount: -₹{parseFloat(editFormData.discount || 0).toFixed(2)}
+                </p>
+                <p className="text-sm text-gray-600">
+                  Tax: ₹{parseFloat(editFormData.tax || 0).toFixed(2)}
+                </p>
+                <p className="text-xl font-bold text-emerald-600">
+                  Total: ₹{(editFormData.items.reduce((sum, item) => sum + item.total, 0) - parseFloat(editFormData.discount || 0) + parseFloat(editFormData.tax || 0)).toFixed(2)}
+                </p>
+              </div>
+            </div>
+
+            <Button type="submit" className="w-full bg-emerald-600 hover:bg-emerald-700">
+              Update Sale
+            </Button>
+          </form>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

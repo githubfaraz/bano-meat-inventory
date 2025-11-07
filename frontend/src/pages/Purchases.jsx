@@ -8,7 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
-import { Plus, Calendar, Trash2, TrendingDown } from "lucide-react";
+import { Plus, Calendar, Trash2, TrendingDown, Edit } from "lucide-react";
 
 const Purchases = () => {
   const [purchases, setPurchases] = useState([]);
@@ -16,6 +16,7 @@ const Purchases = () => {
   const [rawMaterials, setRawMaterials] = useState([]);
   const [loading, setLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [editingPurchase, setEditingPurchase] = useState(null);
   const [formData, setFormData] = useState({
     vendor_id: "",
     raw_material_id: "",
@@ -57,13 +58,18 @@ const Purchases = () => {
         purchase_date: formData.purchase_date
       };
 
-      await axios.post(`${API}/purchases`, data);
-      toast.success("Purchase recorded successfully");
+      if (editingPurchase) {
+        await axios.put(`${API}/purchases/${editingPurchase.id}`, data);
+        toast.success("Purchase updated successfully");
+      } else {
+        await axios.post(`${API}/purchases`, data);
+        toast.success("Purchase recorded successfully");
+      }
       fetchData();
       setDialogOpen(false);
       resetForm();
     } catch (error) {
-      toast.error(error.response?.data?.detail || "Failed to record purchase");
+      toast.error(error.response?.data?.detail || (editingPurchase ? "Failed to update purchase" : "Failed to record purchase"));
     }
   };
 
@@ -78,6 +84,18 @@ const Purchases = () => {
     }
   };
 
+  const handleEdit = (purchase) => {
+    setEditingPurchase(purchase);
+    setFormData({
+      vendor_id: purchase.vendor_id,
+      raw_material_id: purchase.raw_material_id,
+      quantity: purchase.quantity.toString(),
+      cost_per_unit: purchase.cost_per_unit.toString(),
+      purchase_date: new Date(purchase.purchase_date).toISOString().split('T')[0],
+    });
+    setDialogOpen(true);
+  };
+
   const resetForm = () => {
     setFormData({
       vendor_id: "",
@@ -86,6 +104,7 @@ const Purchases = () => {
       cost_per_unit: "",
       purchase_date: new Date().toISOString().split('T')[0],
     });
+    setEditingPurchase(null);
   };
 
   const calculateTotal = () => {
@@ -116,9 +135,9 @@ const Purchases = () => {
               Record Purchase
             </Button>
           </DialogTrigger>
-          <DialogContent className="max-w-xl">
+          <DialogContent className="max-w-xl" onOpenAutoFocus={(e) => e.preventDefault()} onCloseAutoFocus={(e) => e.preventDefault()}>
             <DialogHeader>
-              <DialogTitle>Record New Purchase</DialogTitle>
+              <DialogTitle>{editingPurchase ? "Edit Purchase" : "Record New Purchase"}</DialogTitle>
             </DialogHeader>
             <form onSubmit={handleSubmit} className="space-y-4">
               <div className="space-y-2">
@@ -159,7 +178,7 @@ const Purchases = () => {
                   <Input
                     id="quantity"
                     type="number"
-                    step="0.01"
+                    step="0.5"
                     value={formData.quantity}
                     onChange={(e) => setFormData({ ...formData, quantity: e.target.value })}
                     required
@@ -199,7 +218,7 @@ const Purchases = () => {
               </div>
 
               <Button type="submit" className="w-full bg-emerald-600 hover:bg-emerald-700" data-testid="purchase-submit-button">
-                Record Purchase
+                {editingPurchase ? "Update Purchase" : "Record Purchase"}
               </Button>
             </form>
           </DialogContent>
@@ -240,9 +259,14 @@ const Purchases = () => {
                   <div className="text-right">
                     <p className="text-2xl font-bold text-orange-600">₹{purchase.total_cost.toFixed(2)}</p>
                   </div>
-                  <Button variant="ghost" size="icon" onClick={() => handleDelete(purchase.id)} data-testid={`delete-purchase-${purchase.id}`}>
-                    <Trash2 className="h-4 w-4 text-red-600" />
-                  </Button>
+                  <div className="flex gap-2">
+                    <Button variant="ghost" size="icon" onClick={() => handleEdit(purchase)} data-testid={`edit-purchase-${purchase.id}`}>
+                      <Edit className="h-4 w-4" />
+                    </Button>
+                    <Button variant="ghost" size="icon" onClick={() => handleDelete(purchase.id)} data-testid={`delete-purchase-${purchase.id}`}>
+                      <Trash2 className="h-4 w-4 text-red-600" />
+                    </Button>
+                  </div>
                 </div>
               </div>
             </CardHeader>
