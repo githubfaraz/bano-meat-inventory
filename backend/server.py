@@ -812,10 +812,6 @@ async def get_sale(sale_id: str, current_user: User = Depends(get_current_user))
     sale["items"] = [SaleItem(**item) for item in sale["items"]]
     return Sale(**sale)
 
-<<<<<<< HEAD
-
-||||||| parent of 4e9e17f (Fix inventory issues: input focus, step increments, edit functionality, and backdating)
-=======
 @api_router.put("/sales/{sale_id}", response_model=Sale)
 async def update_sale(sale_id: str, sale_input: SaleCreate, current_user: User = Depends(get_current_user)):
     existing_sale = await db.sales.find_one({"id": sale_id})
@@ -904,7 +900,6 @@ async def update_sale(sale_id: str, sale_input: SaleCreate, current_user: User =
     
     return Sale(**updated_sale)
 
->>>>>>> 4e9e17f (Fix inventory issues: input focus, step increments, edit functionality, and backdating)
 # ========== DASHBOARD ==========
 
 
@@ -1026,10 +1021,6 @@ async def get_purchases(current_user: User = Depends(get_current_user)):
             p["purchase_date"] = datetime.fromisoformat(p["purchase_date"])
     return purchases
 
-<<<<<<< HEAD
-
-||||||| parent of 4e9e17f (Fix inventory issues: input focus, step increments, edit functionality, and backdating)
-=======
 @api_router.put("/purchases/{purchase_id}")
 async def update_purchase(purchase_id: str, purchase_input: PurchaseCreate, current_user: User = Depends(get_current_user)):
     existing_purchase = await db.purchases.find_one({"id": purchase_id})
@@ -1088,7 +1079,6 @@ async def update_purchase(purchase_id: str, purchase_input: PurchaseCreate, curr
     
     return Purchase(**updated_purchase)
 
->>>>>>> 4e9e17f (Fix inventory issues: input focus, step increments, edit functionality, and backdating)
 @api_router.delete("/purchases/{purchase_id}")
 async def delete_purchase(
     purchase_id: str, current_user: User = Depends(get_current_user)
