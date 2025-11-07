@@ -20,6 +20,8 @@ const NewPOS = () => {
   const [loading, setLoading] = useState(false);
   const [customerSearchTerm, setCustomerSearchTerm] = useState("");
   const [showCustomerDropdown, setShowCustomerDropdown] = useState(false);
+  const [editingCartIndex, setEditingCartIndex] = useState(null);
+  const [editPrice, setEditPrice] = useState("");
 
   const customerDropdownRef = useRef(null);
   const API_URL = process.env.REACT_APP_BACKEND_URL || "http://localhost:8001";
@@ -156,6 +158,34 @@ const NewPOS = () => {
     const newCart = cart.filter((_, i) => i !== index);
     setCart(newCart);
     toast.success("Item removed from cart");
+  };
+
+  const handleEditPrice = (index) => {
+    setEditingCartIndex(index);
+    setEditPrice(cart[index].selling_price.toString());
+  };
+
+  const handleSavePriceEdit = () => {
+    if (!editPrice || parseFloat(editPrice) <= 0) {
+      toast.error("Please enter a valid price");
+      return;
+    }
+
+    const newCart = [...cart];
+    const item = newCart[editingCartIndex];
+    const newPrice = parseFloat(editPrice);
+    
+    const qty = item.sale_unit === "package" 
+      ? parseFloat(item.quantity_display.split(" ")[0])
+      : item.quantity_kg;
+    
+    item.selling_price = newPrice;
+    item.total = qty * newPrice;
+    
+    setCart(newCart);
+    setEditingCartIndex(null);
+    setEditPrice("");
+    toast.success("Price updated successfully");
   };
 
   const calculateTotals = () => {
@@ -588,10 +618,17 @@ const NewPOS = () => {
                           {item.main_category_name} • {item.quantity_display} × ₹{item.selling_price}{item.sale_unit === "package" ? "/pkg" : "/kg"}
                         </p>
                       </div>
-                      <div className="flex items-center gap-4">
+                      <div className="flex items-center gap-2">
                         <p className="text-lg font-bold text-emerald-600">
                           ₹{item.total.toFixed(2)}
                         </p>
+                        <button
+                          onClick={() => handleEditPrice(index)}
+                          className="px-2 py-1 text-xs bg-blue-500 text-white rounded hover:bg-blue-600"
+                          title="Edit Price"
+                        >
+                          Edit Price
+                        </button>
                         <button
                           onClick={() => removeFromCart(index)}
                           className="text-red-600 hover:text-red-800"
@@ -764,6 +801,71 @@ const NewPOS = () => {
           </Card>
         </div>
       </div>
+
+      {/* Edit Price Dialog */}
+      {editingCartIndex !== null && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
+            <h3 className="text-xl font-bold mb-4">Edit Price</h3>
+            <div className="space-y-4">
+              <div>
+                <p className="text-sm text-gray-600 mb-2">
+                  Product: <span className="font-semibold">{cart[editingCartIndex].derived_product_name}</span>
+                </p>
+                <p className="text-sm text-gray-600 mb-4">
+                  Quantity: <span className="font-semibold">{cart[editingCartIndex].quantity_display}</span>
+                </p>
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-2">
+                  New Price (₹/{cart[editingCartIndex].sale_unit === "package" ? "pkg" : "kg"}) *
+                </label>
+                <input
+                  type="number"
+                  step="0.01"
+                  min="0.01"
+                  value={editPrice}
+                  onChange={(e) => setEditPrice(e.target.value)}
+                  className="w-full border rounded-lg px-3 py-2"
+                  placeholder="Enter new price"
+                  autoFocus
+                />
+              </div>
+              <div className="bg-gray-50 p-3 rounded">
+                <p className="text-sm text-gray-600">
+                  Original Price: ₹{cart[editingCartIndex].selling_price}
+                </p>
+                {editPrice && parseFloat(editPrice) > 0 && (
+                  <p className="text-sm font-semibold text-emerald-600 mt-1">
+                    New Total: ₹{(
+                      (cart[editingCartIndex].sale_unit === "package" 
+                        ? parseFloat(cart[editingCartIndex].quantity_display.split(" ")[0])
+                        : cart[editingCartIndex].quantity_kg) * parseFloat(editPrice)
+                    ).toFixed(2)}
+                  </p>
+                )}
+              </div>
+              <div className="flex gap-2 justify-end">
+                <button
+                  onClick={() => {
+                    setEditingCartIndex(null);
+                    setEditPrice("");
+                  }}
+                  className="px-4 py-2 border rounded-lg hover:bg-gray-50"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleSavePriceEdit}
+                  className="px-4 py-2 bg-emerald-500 text-white rounded-lg hover:bg-emerald-600"
+                >
+                  Save Price
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

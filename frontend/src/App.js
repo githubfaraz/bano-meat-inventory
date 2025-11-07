@@ -16,6 +16,7 @@ import Users from "@/pages/Users";
 import MainCategories from "@/pages/MainCategories";
 import DerivedProducts from "@/pages/DerivedProducts";
 import InventoryManagement from "@/pages/InventoryManagement";
+import PurchaseHistory from "@/pages/PurchaseHistory";
 import DailyPiecesTracking from "@/pages/DailyPiecesTracking";
 import DailyWasteTracking from "@/pages/DailyWasteTracking";
 import NewPOS from "@/pages/NewPOS";
@@ -83,6 +84,7 @@ function App() {
             <Route path="main-categories" element={<MainCategories />} />
             <Route path="derived-products" element={<DerivedProducts />} />
             <Route path="inventory-management" element={<InventoryManagement />} />
+            <Route path="purchase-history" element={<PurchaseHistory />} />
             <Route path="daily-pieces-tracking" element={<DailyPiecesTracking />} />
             <Route path="daily-waste-tracking" element={<DailyWasteTracking />} />
             <Route path="new-pos" element={<NewPOS />} />
