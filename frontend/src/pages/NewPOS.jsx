@@ -22,6 +22,7 @@ const NewPOS = () => {
   const [showCustomerDropdown, setShowCustomerDropdown] = useState(false);
   const [editingCartIndex, setEditingCartIndex] = useState(null);
   const [editPrice, setEditPrice] = useState("");
+  const [saleDate, setSaleDate] = useState(new Date().toISOString().split("T")[0]);
 
   const customerDropdownRef = useRef(null);
   const API_URL = process.env.REACT_APP_BACKEND_URL || "http://localhost:8001";
@@ -481,6 +482,7 @@ const NewPOS = () => {
         discount: parseFloat(totals.discountAmount),
         total: parseFloat(totals.total),
         payment_method: paymentMethod,
+        sale_date: saleDate,
       };
 
       await axios.post(`${API_URL}/api/pos-sales`, saleData, {
@@ -497,6 +499,7 @@ const NewPOS = () => {
       setSelectedCustomer("walk-in");
       setDiscount(0);
       setPaymentMethod("cash");
+      setSaleDate(new Date().toISOString().split("T")[0]);
       
     } catch (error) {
       toast.error(error.response?.data?.detail || "Failed to complete sale");
@@ -763,6 +766,19 @@ const NewPOS = () => {
                   <option value="card">Card</option>
                   <option value="upi">UPI</option>
                 </select>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium mb-2">
+                  Sale Date
+                </label>
+                <input
+                  type="date"
+                  value={saleDate}
+                  onChange={(e) => setSaleDate(e.target.value)}
+                  className="w-full border rounded-lg px-3 py-2"
+                  max={new Date().toISOString().split("T")[0]}
+                />
               </div>
             </CardContent>
           </Card>
