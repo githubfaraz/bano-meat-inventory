@@ -36,7 +36,20 @@ const Sales = () => {
   const fetchSales = async () => {
     try {
       const response = await axios.get(`${API}/pos-sales`);
-      setSales(response.data);
+      
+      const normalizedSales = Array.isArray(response.data) ? response.data.map(sale => ({
+        ...sale,
+        items: (sale.items || []).map(item => ({
+          product_id: item.derived_product_id || item.main_category_id || '',
+          product_name: item.derived_product_name || item.main_category_name || 'Unknown',
+          quantity: item.quantity_pieces != null && item.quantity_pieces > 0 ? item.quantity_pieces : item.quantity_kg || 0,
+          unit: item.quantity_pieces != null && item.quantity_pieces > 0 ? 'pcs' : 'kg',
+          price_per_unit: item.selling_price || 0,
+          total: item.total || 0
+        }))
+      })) : [];
+      
+      setSales(normalizedSales);
     } catch (error) {
       toast.error("Failed to fetch sales");
     } finally {
@@ -78,7 +91,7 @@ const Sales = () => {
       discount: sale.discount,
       tax: sale.tax,
       payment_method: sale.payment_method,
-      sale_date: new Date(sale.created_at).toISOString().split('T')[0]
+      sale_date: new Date(sale.created_at || sale.sale_date).toISOString().split('T')[0]
     });
     setEditDialogOpen(true);
   };
@@ -160,7 +173,7 @@ const Sales = () => {
     return <div className="p-8">Loading sales...</div>;
   }
 
-  const totalRevenue = sales.reduce((sum, sale) => sum + sale.total, 0);
+  const totalRevenue = sales.reduce((sum, sale) => sum + Number(sale.total || 0), 0);
 
   return (
     <div className="p-8" data-testid="sales-page">
@@ -198,13 +211,13 @@ const Sales = () => {
                   </CardTitle>
                   <div className="flex items-center gap-2 text-sm text-gray-600">
                     <Calendar className="h-4 w-4" />
-                    {new Date(sale.created_at).toLocaleString()}
+                    {new Date(sale.created_at || sale.sale_date).toLocaleString()}
                   </div>
                 </div>
                 <div className="flex items-center gap-4">
                   <div className="text-right">
-                    <p className="text-2xl font-bold text-emerald-600">₹{sale.total.toFixed(2)}</p>
-                    <p className="text-xs text-gray-500 mt-1">{sale.payment_method.toUpperCase()}</p>
+                    <p className="text-2xl font-bold text-emerald-600">₹{Number(sale.total || 0).toFixed(2)}</p>
+                    <p className="text-xs text-gray-500 mt-1">{(sale.payment_method || 'cash').toUpperCase()}</p>
                   </div>
                   <Button variant="ghost" size="icon" onClick={() => handleEditSale(sale)} data-testid={`edit-sale-${sale.id}`}>
                     <Edit className="h-4 w-4" />
@@ -221,12 +234,12 @@ const Sales = () => {
                     className="flex justify-between items-center py-2 px-3 bg-gray-50 rounded"
                   >
                     <div>
-                      <p className="font-medium">{item.product_name}</p>
+                      <p className="font-medium">{item.product_name || 'Unknown'}</p>
                       <p className="text-sm text-gray-600">
-                        {item.quantity} {item.unit} × ₹{item.price_per_unit.toFixed(2)}
+                        {Number(item.quantity || 0)} {item.unit || 'kg'} × ₹{Number(item.price_per_unit || 0).toFixed(2)}
                       </p>
                     </div>
-                    <p className="font-semibold">₹{item.total.toFixed(2)}</p>
+                    <p className="font-semibold">₹{Number(item.total || 0).toFixed(2)}</p>
                   </div>
                 ))}
               </div>
@@ -234,17 +247,17 @@ const Sales = () => {
               <div className="mt-4 pt-4 border-t space-y-1">
                 <div className="flex justify-between text-sm">
                   <span className="text-gray-600">Subtotal:</span>
-                  <span>₹{sale.subtotal.toFixed(2)}</span>
+                  <span>₹{Number(sale.subtotal || 0).toFixed(2)}</span>
                 </div>
-                {sale.discount > 0 && (
+                {Number(sale.discount || 0) > 0 && (
                   <div className="flex justify-between text-sm">
                     <span className="text-gray-600">Discount:</span>
-                    <span className="text-red-600">-₹{sale.discount.toFixed(2)}</span>
+                    <span className="text-red-600">-₹{Number(sale.discount || 0).toFixed(2)}</span>
                   </div>
                 )}
                 <div className="flex justify-between text-sm">
                   <span className="text-gray-600">Tax:</span>
-                  <span>₹{sale.tax.toFixed(2)}</span>
+                  <span>₹{Number(sale.tax || 0).toFixed(2)}</span>
                 </div>
               </div>
             </CardContent>
