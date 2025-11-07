@@ -568,7 +568,7 @@ const NewPOS = () => {
                   </label>
                   <input
                     type="number"
-                    step="0.1"
+                    step="0.5"
                     value={quantityKg}
                     onChange={(e) => setQuantityKg(e.target.value)}
                     className="w-full border rounded-lg px-3 py-2"
@@ -577,6 +577,7 @@ const NewPOS = () => {
                         ? "e.g., 3 (packages)"
                         : "e.g., 2.5 (kg)"
                     }
+                    autoFocus={false}
                   />
                   <p className="text-xs text-gray-500 mt-1">
                     {selectedProduct && derivedProducts.find(p => p.id === selectedProduct)?.sale_unit === "package"
