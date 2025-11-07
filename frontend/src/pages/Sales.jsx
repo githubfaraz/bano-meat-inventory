@@ -80,17 +80,17 @@ const Sales = () => {
     setEditFormData({
       customer_id: sale.customer_id || "",
       customer_name: sale.customer_name || "",
-      items: sale.items.map(item => ({
-        product_id: item.product_id,
-        product_name: item.product_name,
-        quantity: item.quantity,
-        price_per_unit: item.price_per_unit,
-        unit: item.unit,
-        total: item.total
+      items: (sale.items || []).map(item => ({
+        product_id: item.product_id || "",
+        product_name: item.product_name || "Unknown",
+        quantity: Number(item.quantity || 0),
+        price_per_unit: Number(item.price_per_unit || 0),
+        unit: item.unit || "kg",
+        total: Number(item.total || 0)
       })),
-      discount: sale.discount,
-      tax: sale.tax,
-      payment_method: sale.payment_method,
+      discount: Number(sale.discount || 0),
+      tax: Number(sale.tax || 0),
+      payment_method: (sale.payment_method || "cash").toLowerCase(),
       sale_date: new Date(sale.created_at || sale.sale_date).toISOString().split('T')[0]
     });
     setEditDialogOpen(true);
@@ -281,21 +281,29 @@ const Sales = () => {
               <div className="space-y-2">
                 <Label htmlFor="customer">Customer</Label>
                 <Select
-                  value={editFormData.customer_id}
+                  value={editFormData.customer_id || "walk-in"}
                   onValueChange={(value) => {
-                    const customer = customers.find(c => c.id === value);
-                    setEditFormData({
-                      ...editFormData,
-                      customer_id: value,
-                      customer_name: customer ? customer.name : ""
-                    });
+                    if (value === "walk-in") {
+                      setEditFormData({
+                        ...editFormData,
+                        customer_id: "",
+                        customer_name: ""
+                      });
+                    } else {
+                      const customer = customers.find(c => c.id === value);
+                      setEditFormData({
+                        ...editFormData,
+                        customer_id: value,
+                        customer_name: customer ? customer.name : ""
+                      });
+                    }
                   }}
                 >
                   <SelectTrigger>
                     <SelectValue placeholder="Walk-in Customer" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">Walk-in Customer</SelectItem>
+                    <SelectItem value="walk-in">Walk-in Customer</SelectItem>
                     {customers.map((customer) => (
                       <SelectItem key={customer.id} value={customer.id}>
                         {customer.name}
@@ -379,7 +387,7 @@ const Sales = () => {
                     </div>
                   </div>
                   <div className="text-sm text-gray-600">
-                    Total: ₹{item.total.toFixed(2)}
+                    Total: ₹{Number(item.total || 0).toFixed(2)}
                   </div>
                 </div>
               ))}
@@ -429,16 +437,16 @@ const Sales = () => {
             <div className="pt-4 border-t">
               <div className="text-right space-y-1">
                 <p className="text-sm text-gray-600">
-                  Subtotal: ₹{editFormData.items.reduce((sum, item) => sum + item.total, 0).toFixed(2)}
+                  Subtotal: ₹{(editFormData.items || []).reduce((sum, item) => sum + Number(item.total || 0), 0).toFixed(2)}
                 </p>
                 <p className="text-sm text-gray-600">
-                  Discount: -₹{parseFloat(editFormData.discount || 0).toFixed(2)}
+                  Discount: -₹{Number(editFormData.discount || 0).toFixed(2)}
                 </p>
                 <p className="text-sm text-gray-600">
-                  Tax: ₹{parseFloat(editFormData.tax || 0).toFixed(2)}
+                  Tax: ₹{Number(editFormData.tax || 0).toFixed(2)}
                 </p>
                 <p className="text-xl font-bold text-emerald-600">
-                  Total: ₹{(editFormData.items.reduce((sum, item) => sum + item.total, 0) - parseFloat(editFormData.discount || 0) + parseFloat(editFormData.tax || 0)).toFixed(2)}
+                  Total: ₹{((editFormData.items || []).reduce((sum, item) => sum + Number(item.total || 0), 0) - Number(editFormData.discount || 0) + Number(editFormData.tax || 0)).toFixed(2)}
                 </p>
               </div>
             </div>
