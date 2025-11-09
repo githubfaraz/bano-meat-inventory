@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import axios from "axios";
 import { API } from "../App";
+import { formatDate } from "../lib/utils";
 import {
   Pagination,
   PaginationContent,
@@ -342,7 +343,7 @@ const PurchaseHistory = () => {
                   <tr key={purchase.id} className="hover:bg-gray-50">
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="text-sm font-medium text-gray-900">
-                        {new Date(purchase.purchase_date).toLocaleDateString()}
+                        {formatDate(purchase.purchase_date)}
                       </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">

@@ -1,6 +1,7 @@
 import { useEffect, useState, useRef } from "react";
 import axios from "axios";
 import { toast } from "sonner";
+import { formatDateTime } from "../lib/utils";
 import { Plus, Trash2, ShoppingCart, Printer, Search } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "../components/ui/card";
 import { Button } from "../components/ui/button";
@@ -387,7 +388,7 @@ const NewPOS = () => {
         </div>
         
         <div class="info">
-          <div><strong>Date:</strong> ${new Date().toLocaleString('en-IN', { dateStyle: 'short', timeStyle: 'short' })}</div>
+          <div><strong>Date:</strong> ${formatDateTime(new Date().toISOString())}</div>
           <div><strong>Customer:</strong> ${customerName}</div>
           <div><strong>Payment:</strong> ${paymentMethod.toUpperCase()}</div>
         </div>

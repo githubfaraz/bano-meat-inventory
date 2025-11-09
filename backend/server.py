@@ -456,6 +456,7 @@ class POSSaleCreateNew(BaseModel):
     discount: float
     total: float
     payment_method: str
+    sale_date: Optional[str] = None
 
 
 class POSSaleNew(BaseModel):

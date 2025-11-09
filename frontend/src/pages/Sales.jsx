@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import axios from "axios";
 import { API } from "@/App";
+import { formatDateTime } from "../lib/utils";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -311,7 +312,7 @@ const Sales = () => {
                   </CardTitle>
                   <div className="flex items-center gap-2 text-sm text-gray-600">
                     <Calendar className="h-4 w-4" />
-                    {new Date(sale.created_at || sale.sale_date).toLocaleString()}
+                    {formatDateTime(sale.created_at || sale.sale_date)}
                   </div>
                 </div>
                 <div className="flex items-center gap-4">

@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import axios from "axios";
 import { toast } from "sonner";
+import { formatDate } from "../lib/utils";
 import { Plus, Edit2, Trash2, Package } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "../components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "../components/ui/dialog";
@@ -162,7 +163,7 @@ const MainCategories = () => {
                 {category.description || "No description"}
               </p>
               <p className="text-xs text-gray-400 mt-2">
-                Created: {new Date(category.created_at).toLocaleDateString()}
+                Created: {formatDate(category.created_at)}
               </p>
             </CardContent>
           </Card>

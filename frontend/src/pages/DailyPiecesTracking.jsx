@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import axios from "axios";
 import { API } from "../App";
+import { formatDate, formatDateTime } from "../lib/utils";
 import {
   Pagination,
   PaginationContent,
@@ -285,7 +286,7 @@ const DailyPiecesTracking = () => {
                   <tr key={tracking.id} className="hover:bg-gray-50">
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="text-sm font-medium text-gray-900">
-                        {new Date(tracking.tracking_date).toLocaleDateString()}
+                        {formatDate(tracking.tracking_date)}
                       </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
@@ -296,7 +297,7 @@ const DailyPiecesTracking = () => {
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="text-sm text-gray-500">
-                        {new Date(tracking.created_at).toLocaleString()}
+                        {formatDateTime(tracking.created_at)}
                       </div>
                     </td>
                     {isAdmin && (
