@@ -2854,6 +2854,7 @@ async def get_pos_sales(
     main_category_id: Optional[str] = None,
     current_user: User = Depends(get_current_user),
 ):
+<<<<<<< Updated upstream
     query = {}
     if start_date and end_date:
         query["sale_date"] = {
@@ -2861,11 +2862,54 @@ async def get_pos_sales(
             "$lte": datetime.fromisoformat(end_date),
         }
 
+||||||| constructed merge base
+    query = {}
+    
+    if start_date or end_date:
+        date_filter = {}
+        if start_date:
+            start_dt = datetime.fromisoformat(start_date.replace('Z', '+00:00'))
+            date_filter["$gte"] = start_dt
+        if end_date:
+            end_dt = datetime.fromisoformat(end_date.replace('Z', '+00:00'))
+            date_filter["$lte"] = end_dt
+        
+        query["sale_date"] = date_filter
+
+=======
+>>>>>>> Stashed changes
     sales = (
-        await db.pos_sales.find(query, {"_id": 0})
-        .sort("sale_date", -1)
+        await db.pos_sales.find({}, {"_id": 0})
         .to_list(length=None)
     )
+    
+    if start_date or end_date:
+        from datetime import date
+        
+        start_d = date.fromisoformat(start_date[:10]) if start_date else None
+        end_d = date.fromisoformat(end_date[:10]) if end_date else None
+        
+        filtered_sales = []
+        for sale in sales:
+            effective_date_str = sale.get("sale_date") or sale.get("created_at")
+            if effective_date_str:
+                try:
+                    effective_dt = datetime.fromisoformat(effective_date_str.replace('Z', '+00:00'))
+                    effective_date = effective_dt.date()
+                    
+                    if start_d and effective_date < start_d:
+                        continue
+                    if end_d and effective_date > end_d:
+                        continue
+                    
+                    filtered_sales.append(sale)
+                except (ValueError, AttributeError):
+                    continue
+        
+        sales = filtered_sales
+        sales.sort(key=lambda s: s.get("sale_date") or s.get("created_at"), reverse=True)
+    else:
+        sales.sort(key=lambda s: s.get("sale_date") or s.get("created_at"), reverse=True)
 
     # Filter by main_category_id if provided
     if main_category_id:
