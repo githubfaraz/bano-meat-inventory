@@ -18,7 +18,7 @@ import {
   PaginationEllipsis,
 } from "@/components/ui/pagination";
 import { toast } from "sonner";
-import { TrendingUp, Calendar, Edit, Trash2, Plus } from "lucide-react";
+import { TrendingUp, Calendar, Edit, Trash2, Plus, Download } from "lucide-react";
 
 const ITEMS_PER_PAGE = 10;
 
@@ -244,6 +244,39 @@ const Sales = () => {
     setTimeout(() => fetchSales(), 0);
   };
 
+  const handleExport = async (format) => {
+    try {
+      const params = new URLSearchParams();
+      if (startDate) params.append('start_date', `${startDate}T00:00:00`);
+      if (endDate) params.append('end_date', `${endDate}T23:59:59`);
+      params.append('format', format);
+      
+      const url = `${API}/reports/sales?${params.toString()}`;
+      const response = await axios.get(url, {
+        responseType: 'blob',
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
+        }
+      });
+      
+      const blob = new Blob([response.data]);
+      const downloadUrl = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = downloadUrl;
+      
+      const extension = format === 'excel' ? 'xlsx' : format;
+      link.download = `sales_report.${extension}`;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(downloadUrl);
+      
+      toast.success(`Sales report exported as ${format.toUpperCase()}`);
+    } catch (error) {
+      toast.error("Failed to export report");
+    }
+  };
+
   return (
     <div className="p-8" data-testid="sales-page">
       <div className="mb-8">
@@ -256,7 +289,7 @@ const Sales = () => {
       {/* Date Filter */}
       <Card className="mb-6">
         <CardContent className="pt-6">
-          <div className="flex items-end gap-4">
+          <div className="flex items-end gap-4 mb-4">
             <div className="flex-1">
               <Label htmlFor="start_date">Start Date</Label>
               <Input
@@ -280,6 +313,19 @@ const Sales = () => {
             </Button>
             <Button onClick={handleClearFilter} variant="outline">
               Clear Filter
+            </Button>
+          </div>
+          <div className="flex items-center gap-2 pt-4 border-t">
+            <Download className="h-4 w-4 text-gray-600" />
+            <span className="text-sm text-gray-600 mr-2">Export:</span>
+            <Button onClick={() => handleExport('csv')} variant="outline" size="sm">
+              CSV
+            </Button>
+            <Button onClick={() => handleExport('excel')} variant="outline" size="sm">
+              Excel
+            </Button>
+            <Button onClick={() => handleExport('pdf')} variant="outline" size="sm">
+              PDF
             </Button>
           </div>
         </CardContent>
