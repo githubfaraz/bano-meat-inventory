@@ -29,6 +29,8 @@ const Sales = () => {
   const [products, setProducts] = useState([]);
   const [customers, setCustomers] = useState([]);
   const [currentPage, setCurrentPage] = useState(1);
+  const [startDate, setStartDate] = useState("");
+  const [endDate, setEndDate] = useState("");
   const [editFormData, setEditFormData] = useState({
     customer_id: "",
     customer_name: "",
@@ -38,6 +40,9 @@ const Sales = () => {
     payment_method: "cash",
     sale_date: ""
   });
+  
+  const currentUser = JSON.parse(localStorage.getItem("user") || "{}");
+  const isAdmin = currentUser.is_admin === true;
 
   useEffect(() => {
     fetchSales();
@@ -47,7 +52,21 @@ const Sales = () => {
 
   const fetchSales = async () => {
     try {
-      const response = await axios.get(`${API}/pos-sales`);
+      let url = `${API}/pos-sales`;
+      const params = new URLSearchParams();
+      
+      if (startDate) {
+        params.append('start_date', startDate);
+      }
+      if (endDate) {
+        params.append('end_date', endDate);
+      }
+      
+      if (params.toString()) {
+        url += `?${params.toString()}`;
+      }
+      
+      const response = await axios.get(url);
       
       const normalizedSales = Array.isArray(response.data) ? response.data.map(sale => ({
         ...sale,
@@ -181,6 +200,20 @@ const Sales = () => {
     }
   };
 
+  const handleDeleteSale = async (saleId) => {
+    if (!window.confirm("Are you sure you want to delete this sale? This will restore the inventory.")) {
+      return;
+    }
+    
+    try {
+      await axios.delete(`${API}/pos-sales/${saleId}`);
+      toast.success("Sale deleted successfully");
+      fetchSales();
+    } catch (error) {
+      toast.error(error.response?.data?.detail || "Failed to delete sale");
+    }
+  };
+
   if (loading) {
     return <div className="p-8">Loading sales...</div>;
   }
@@ -198,6 +231,18 @@ const Sales = () => {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
+  const handleApplyFilter = () => {
+    setCurrentPage(1);
+    fetchSales();
+  };
+
+  const handleClearFilter = () => {
+    setStartDate("");
+    setEndDate("");
+    setCurrentPage(1);
+    setTimeout(() => fetchSales(), 0);
+  };
+
   return (
     <div className="p-8" data-testid="sales-page">
       <div className="mb-8">
@@ -206,6 +251,38 @@ const Sales = () => {
         </h1>
         <p className="text-gray-600">View all transactions ({sales.length} total)</p>
       </div>
+
+      {/* Date Filter */}
+      <Card className="mb-6">
+        <CardContent className="pt-6">
+          <div className="flex items-end gap-4">
+            <div className="flex-1">
+              <Label htmlFor="start_date">Start Date</Label>
+              <Input
+                id="start_date"
+                type="date"
+                value={startDate}
+                onChange={(e) => setStartDate(e.target.value)}
+              />
+            </div>
+            <div className="flex-1">
+              <Label htmlFor="end_date">End Date</Label>
+              <Input
+                id="end_date"
+                type="date"
+                value={endDate}
+                onChange={(e) => setEndDate(e.target.value)}
+              />
+            </div>
+            <Button onClick={handleApplyFilter} className="bg-emerald-600 hover:bg-emerald-700">
+              Apply Filter
+            </Button>
+            <Button onClick={handleClearFilter} variant="outline">
+              Clear Filter
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
 
       {/* Revenue Card */}
       <Card className="mb-6 bg-gradient-to-br from-emerald-50 to-teal-50 border-emerald-200">
@@ -242,9 +319,16 @@ const Sales = () => {
                     <p className="text-2xl font-bold text-emerald-600">₹{Number(sale.total || 0).toFixed(2)}</p>
                     <p className="text-xs text-gray-500 mt-1">{(sale.payment_method || 'cash').toUpperCase()}</p>
                   </div>
-                  <Button variant="ghost" size="icon" onClick={() => handleEditSale(sale)} data-testid={`edit-sale-${sale.id}`}>
-                    <Edit className="h-4 w-4" />
-                  </Button>
+                  <div className="flex gap-2">
+                    <Button variant="ghost" size="icon" onClick={() => handleEditSale(sale)} data-testid={`edit-sale-${sale.id}`}>
+                      <Edit className="h-4 w-4" />
+                    </Button>
+                    {isAdmin && (
+                      <Button variant="ghost" size="icon" onClick={() => handleDeleteSale(sale.id)} data-testid={`delete-sale-${sale.id}`}>
+                        <Trash2 className="h-4 w-4 text-red-600" />
+                      </Button>
+                    )}
+                  </div>
                 </div>
               </div>
             </CardHeader>
