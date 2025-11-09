@@ -2854,30 +2854,6 @@ async def get_pos_sales(
     main_category_id: Optional[str] = None,
     current_user: User = Depends(get_current_user),
 ):
-<<<<<<< Updated upstream
-    query = {}
-    if start_date and end_date:
-        query["sale_date"] = {
-            "$gte": datetime.fromisoformat(start_date),
-            "$lte": datetime.fromisoformat(end_date),
-        }
-
-||||||| constructed merge base
-    query = {}
-    
-    if start_date or end_date:
-        date_filter = {}
-        if start_date:
-            start_dt = datetime.fromisoformat(start_date.replace('Z', '+00:00'))
-            date_filter["$gte"] = start_dt
-        if end_date:
-            end_dt = datetime.fromisoformat(end_date.replace('Z', '+00:00'))
-            date_filter["$lte"] = end_dt
-        
-        query["sale_date"] = date_filter
-
-=======
->>>>>>> Stashed changes
     sales = (
         await db.pos_sales.find({}, {"_id": 0})
         .to_list(length=None)
