@@ -262,7 +262,7 @@ const PurchaseHistory = () => {
         )}
       </div>
 
-      <div className="mb-6 grid grid-cols-1 md:grid-cols-3 gap-4">
+      <div className="mb-6 grid grid-cols-1 md:grid-cols-4 gap-4">
         <div>
           <label className="block text-sm font-medium mb-2">Filter by Category</label>
           <select
@@ -295,6 +295,19 @@ const PurchaseHistory = () => {
             onChange={(e) => setEndDate(e.target.value)}
             className="border rounded-lg px-4 py-2 w-full"
           />
+        </div>
+        <div className="flex items-end">
+          <button
+            onClick={() => {
+              setStartDate("");
+              setEndDate("");
+              setSelectedCategory("all");
+              setCurrentPage(1);
+            }}
+            className="border border-gray-300 rounded-lg px-4 py-2 w-full hover:bg-gray-50 text-gray-700"
+          >
+            Clear Filters
+          </button>
         </div>
       </div>
 

@@ -1992,10 +1992,14 @@ async def get_inventory_purchases(
     query = {}
     if main_category_id:
         query["main_category_id"] = main_category_id
-    if start_date and end_date:
-        query["purchase_date"] = {"$gte": start_date, "$lte": end_date}
-    elif start_date:
-        query["purchase_date"] = {"$gte": start_date}
+    
+    if start_date or end_date:
+        date_filter = {}
+        if start_date:
+            date_filter["$gte"] = start_date[:10]
+        if end_date:
+            date_filter["$lte"] = end_date[:10]
+        query["purchase_date"] = date_filter
 
     purchases = (
         await db.inventory_purchases.find(query, {"_id": 0})
@@ -2249,10 +2253,14 @@ async def get_daily_pieces_tracking(
     query = {}
     if main_category_id:
         query["main_category_id"] = main_category_id
-    if start_date and end_date:
-        query["tracking_date"] = {"$gte": start_date, "$lte": end_date}
-    elif start_date:
-        query["tracking_date"] = {"$gte": start_date}
+    
+    if start_date or end_date:
+        date_filter = {}
+        if start_date:
+            date_filter["$gte"] = start_date[:10]
+        if end_date:
+            date_filter["$lte"] = end_date[:10]
+        query["tracking_date"] = date_filter
 
     tracking = (
         await db.daily_pieces_tracking.find(query, {"_id": 0})
@@ -2496,10 +2504,14 @@ async def get_daily_waste_tracking(
     query = {}
     if main_category_id:
         query["main_category_id"] = main_category_id
-    if start_date and end_date:
-        query["tracking_date"] = {"$gte": start_date, "$lte": end_date}
-    elif start_date:
-        query["tracking_date"] = {"$gte": start_date}
+    
+    if start_date or end_date:
+        date_filter = {}
+        if start_date:
+            date_filter["$gte"] = start_date[:10]
+        if end_date:
+            date_filter["$lte"] = end_date[:10]
+        query["tracking_date"] = date_filter
 
     tracking = (
         await db.daily_waste_tracking.find(query, {"_id": 0})
