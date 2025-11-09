@@ -75,10 +75,10 @@ const DailyPiecesTracking = () => {
         params.append("main_category_id", selectedCategory);
       }
       if (startDate) {
-        params.append("start_date", startDate);
+        params.append("start_date", `${startDate}T00:00:00`);
       }
       if (endDate) {
-        params.append("end_date", endDate);
+        params.append("end_date", `${endDate}T23:59:59`);
       }
       
       const url = `${API}/daily-pieces-tracking${params.toString() ? `?${params.toString()}` : ""}`;

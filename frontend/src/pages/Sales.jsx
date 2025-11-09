@@ -56,10 +56,10 @@ const Sales = () => {
       const params = new URLSearchParams();
       
       if (startDate) {
-        params.append('start_date', startDate);
+        params.append('start_date', `${startDate}T00:00:00`);
       }
       if (endDate) {
-        params.append('end_date', endDate);
+        params.append('end_date', `${endDate}T23:59:59`);
       }
       
       if (params.toString()) {

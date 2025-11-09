@@ -94,10 +94,10 @@ const PurchaseHistory = () => {
         params.push(`main_category_id=${selectedCategory}`);
       }
       if (startDate) {
-        params.push(`start_date=${startDate}`);
+        params.push(`start_date=${startDate}T00:00:00`);
       }
       if (endDate) {
-        params.push(`end_date=${endDate}`);
+        params.push(`end_date=${endDate}T23:59:59`);
       }
       
       if (params.length > 0) {
