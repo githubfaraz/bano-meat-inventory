@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import axios from "axios";
 import { API } from "@/App";
+import { formatDateTime } from "../lib/utils";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -165,7 +166,7 @@ const POS = () => {
           Receipt #${sale.id.substring(0, 8)}
         </div>
         <div class="border-bottom" style="margin-bottom: 8px;">
-          <div>Date: ${new Date(sale.created_at).toLocaleString()}</div>
+          <div>Date: ${formatDateTime(sale.created_at)}</div>
           <div>Customer: ${customer?.name || "Walk-in Customer"}</div>
           ${customer?.phone ? `<div>Phone: ${customer.phone}</div>` : ""}
         </div>

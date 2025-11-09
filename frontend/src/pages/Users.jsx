@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import axios from "axios";
 import { API } from "@/App";
+import { formatDate } from "../lib/utils";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -265,7 +266,7 @@ const Users = () => {
                   <span className="text-gray-700">{user.email}</span>
                 </div>
                 <div className="text-xs text-gray-500">
-                  Created: {new Date(user.created_at).toLocaleDateString()}
+                  Created: {formatDate(user.created_at)}
                 </div>
                 {user.username === 'admin-bano' && (
                   <div className="mt-2 px-2 py-1 bg-amber-50 text-amber-700 text-xs rounded">
