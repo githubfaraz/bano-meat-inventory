@@ -24,8 +24,8 @@ const Reports = () => {
     setLoading(true);
     try {
       const params = new URLSearchParams();
-      if (dateRange.start_date) params.append('start_date', dateRange.start_date);
-      if (dateRange.end_date) params.append('end_date', dateRange.end_date);
+      if (dateRange.start_date) params.append('start_date', `${dateRange.start_date}T00:00:00`);
+      if (dateRange.end_date) params.append('end_date', `${dateRange.end_date}T23:59:59`);
       params.append('format', format);
 
       const response = await axios.get(`${API}/reports/${reportType}?${params.toString()}`, {

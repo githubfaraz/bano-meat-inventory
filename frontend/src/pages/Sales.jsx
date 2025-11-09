@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import axios from "axios";
 import { API } from "@/App";
+import { formatDateTime } from "../lib/utils";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -56,10 +57,10 @@ const Sales = () => {
       const params = new URLSearchParams();
       
       if (startDate) {
-        params.append('start_date', startDate);
+        params.append('start_date', `${startDate}T00:00:00`);
       }
       if (endDate) {
-        params.append('end_date', endDate);
+        params.append('end_date', `${endDate}T23:59:59`);
       }
       
       if (params.toString()) {
@@ -311,7 +312,7 @@ const Sales = () => {
                   </CardTitle>
                   <div className="flex items-center gap-2 text-sm text-gray-600">
                     <Calendar className="h-4 w-4" />
-                    {new Date(sale.created_at || sale.sale_date).toLocaleString()}
+                    {formatDateTime(sale.created_at || sale.sale_date)}
                   </div>
                 </div>
                 <div className="flex items-center gap-4">

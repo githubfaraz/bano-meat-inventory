@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import axios from "axios";
 import { API } from "@/App";
+import { formatDateTime } from "../lib/utils";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { DollarSign, Package, Users, AlertTriangle, Weight } from "lucide-react";
 import { toast } from "sonner";
@@ -212,7 +213,7 @@ const Dashboard = () => {
                       {sale.customer_name || "Walk-in Customer"}
                     </p>
                     <p className="text-sm text-gray-600">
-                      {new Date(sale.created_at).toLocaleString()}
+                      {formatDateTime(sale.created_at)}
                     </p>
                     <p className="text-xs text-gray-500">
                       {sale.items.length} item(s) • {sale.payment_method.toUpperCase()}

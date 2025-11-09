@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import axios from "axios";
 import { API } from "../App";
+import { formatDate } from "../lib/utils";
 
 const InventoryManagement = () => {
   const [categories, setCategories] = useState([]);
@@ -531,8 +532,7 @@ const InventoryManagement = () => {
                       </div>
                       <div>
                         <p className="text-sm font-medium">Purchase Date</p>
-                        <p className="text-sm text-gray-600">{new Date(purchase.purchase_date).toLocaleDateString()}</p>
-                        <p className="text-xs text-gray-400">{new Date(purchase.purchase_date).toLocaleTimeString()}</p>
+                        <p className="text-sm text-gray-600">{formatDate(purchase.purchase_date)}</p>
                       </div>
                       <div>
                         <p className="text-sm text-gray-500">Notes: {purchase.notes || '...'}</p>
