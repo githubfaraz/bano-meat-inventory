@@ -28,6 +28,45 @@ def get_ist_now():
     return datetime.now(IST)
 
 
+def parse_date_flexible(date_str):
+    """
+    Parse a date string in multiple formats and return a date object.
+    Handles: ISO format (YYYY-MM-DD), dd-mm-yyyy, datetime objects, ISO with time/timezone.
+    Returns None if parsing fails.
+    """
+    if not date_str:
+        return None
+    
+    if isinstance(date_str, datetime):
+        return date_str.date()
+    
+    if not isinstance(date_str, str):
+        return None
+    
+    from datetime import date
+    
+    try:
+        dt = datetime.fromisoformat(date_str.replace('Z', '+00:00'))
+        return dt.date()
+    except (ValueError, AttributeError):
+        pass
+    
+    try:
+        if len(date_str) >= 10 and date_str[4] == '-' and date_str[7] == '-':
+            return date.fromisoformat(date_str[:10])
+    except (ValueError, AttributeError):
+        pass
+    
+    try:
+        if len(date_str) >= 10 and date_str[2] == '-' and date_str[5] == '-':
+            day, month, year = date_str[:10].split('-')
+            return date(int(year), int(month), int(day))
+    except (ValueError, AttributeError, IndexError):
+        pass
+    
+    return None
+
+
 # MongoDB connection
 mongo_url = os.environ["MONGO_URL"]
 client = AsyncIOMotorClient(mongo_url)
@@ -2936,9 +2975,11 @@ async def get_pos_sales(
                 filtered_sales.append(sale)
         
         sales = filtered_sales
+        from datetime import date
         sales.sort(key=lambda s: parse_date_flexible(s.get("sale_date") or s.get("created_at")) or date.min, reverse=True)
     else:
-        sales.sort(key=lambda s: s.get("sale_date") or s.get("created_at"), reverse=True)
+        from datetime import date
+        sales.sort(key=lambda s: parse_date_flexible(s.get("sale_date") or s.get("created_at")) or date.min, reverse=True)
 
     # Filter by main_category_id if provided
     if main_category_id:
