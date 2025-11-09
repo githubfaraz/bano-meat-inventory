@@ -1111,16 +1111,34 @@ async def get_sales_report(
     format: str = "json",
     current_user: User = Depends(get_current_user),
 ):
-    # Fetch sales
-    sales = await db.sales.find({}, {"_id": 0}).to_list(10000)
+    # Fetch sales from pos_sales collection (not sales)
+    sales = await db.pos_sales.find({}, {"_id": 0}).to_list(10000)
 
-    # Filter by date if provided
-    if start_date:
-        start = datetime.fromisoformat(start_date)
-        sales = [s for s in sales if datetime.fromisoformat(s["created_at"]) >= start]
-    if end_date:
-        end = datetime.fromisoformat(end_date).replace(hour=23, minute=59, second=59)
-        sales = [s for s in sales if datetime.fromisoformat(s["created_at"]) <= end]
+    # Filter by date if provided (using effective date logic: sale_date or created_at)
+    if start_date or end_date:
+        from datetime import date
+        
+        start_d = date.fromisoformat(start_date[:10]) if start_date else None
+        end_d = date.fromisoformat(end_date[:10]) if end_date else None
+        
+        filtered_sales = []
+        for sale in sales:
+            effective_date_str = sale.get("sale_date") or sale.get("created_at")
+            if effective_date_str:
+                try:
+                    effective_dt = datetime.fromisoformat(effective_date_str.replace('Z', '+00:00'))
+                    effective_date = effective_dt.date()
+                    
+                    if start_d and effective_date < start_d:
+                        continue
+                    if end_d and effective_date > end_d:
+                        continue
+                    
+                    filtered_sales.append(sale)
+                except (ValueError, AttributeError):
+                    continue
+        
+        sales = filtered_sales
 
     if format == "csv":
         output = BytesIO()
@@ -1137,17 +1155,20 @@ async def get_sales_report(
                 "Payment Method",
             ]
         )
+        if not sales:
+            writer.writerow(["No records found for the selected date range", "", "", "", "", "", "", ""])
         for sale in sales:
+            sale_date = sale.get("sale_date") or sale.get("created_at", "")
             writer.writerow(
                 [
-                    sale["created_at"],
+                    sale_date,
                     sale.get("customer_name", "Walk-in"),
-                    len(sale["items"]),
-                    sale["subtotal"],
-                    sale["tax"],
-                    sale["discount"],
-                    sale["total"],
-                    sale["payment_method"],
+                    len(sale.get("items", [])),
+                    sale.get("subtotal", 0),
+                    sale.get("tax", 0),
+                    sale.get("discount", 0),
+                    sale.get("total", 0),
+                    sale.get("payment_method", ""),
                 ]
             )
         output.seek(0)
@@ -1184,17 +1205,20 @@ async def get_sales_report(
             cell.alignment = Alignment(horizontal="center")
 
         # Data
+        if not sales:
+            ws.append(["No records found for the selected date range", "", "", "", "", "", "", ""])
         for sale in sales:
+            sale_date = sale.get("sale_date") or sale.get("created_at", "")
             ws.append(
                 [
-                    sale["created_at"],
+                    sale_date,
                     sale.get("customer_name", "Walk-in"),
-                    len(sale["items"]),
-                    sale["subtotal"],
-                    sale["tax"],
-                    sale["discount"],
-                    sale["total"],
-                    sale["payment_method"],
+                    len(sale.get("items", [])),
+                    sale.get("subtotal", 0),
+                    sale.get("tax", 0),
+                    sale.get("discount", 0),
+                    sale.get("total", 0),
+                    sale.get("payment_method", ""),
                 ]
             )
 
@@ -1217,47 +1241,52 @@ async def get_sales_report(
         elements.append(title)
         elements.append(Spacer(1, 0.3 * inch))
 
-        data = [
-            [
-                "Date",
-                "Customer",
-                "Items",
-                "Subtotal",
-                "Tax",
-                "Discount",
-                "Total",
-                "Payment",
+        if not sales:
+            no_data_msg = Paragraph("No records found for the selected date range.", styles["Normal"])
+            elements.append(no_data_msg)
+        else:
+            data = [
+                [
+                    "Date",
+                    "Customer",
+                    "Items",
+                    "Subtotal",
+                    "Tax",
+                    "Discount",
+                    "Total",
+                    "Payment",
+                ]
             ]
-        ]
-        for sale in sales:
-            data.append(
-                [
-                    sale["created_at"][:10],
-                    sale.get("customer_name", "Walk-in")[:15],
-                    str(len(sale["items"])),
-                    f"₹{sale['subtotal']:.2f}",
-                    f"₹{sale['tax']:.2f}",
-                    f"₹{sale['discount']:.2f}",
-                    f"₹{sale['total']:.2f}",
-                    sale["payment_method"],
-                ]
-            )
+            for sale in sales:
+                sale_date = sale.get("sale_date") or sale.get("created_at", "")
+                data.append(
+                    [
+                        sale_date[:10] if sale_date else "",
+                        sale.get("customer_name", "Walk-in")[:15],
+                        str(len(sale.get("items", []))),
+                        f"₹{sale.get('subtotal', 0):.2f}",
+                        f"₹{sale.get('tax', 0):.2f}",
+                        f"₹{sale.get('discount', 0):.2f}",
+                        f"₹{sale.get('total', 0):.2f}",
+                        sale.get("payment_method", ""),
+                    ]
+                )
 
-        table = Table(data)
-        table.setStyle(
-            TableStyle(
-                [
-                    ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#0066CC")),
-                    ("TEXTCOLOR", (0, 0), (-1, 0), colors.whitesmoke),
-                    ("ALIGN", (0, 0), (-1, -1), "CENTER"),
-                    ("FONTNAME", (0, 0), (-1, 0), "Helvetica-Bold"),
-                    ("FONTSIZE", (0, 0), (-1, 0), 10),
-                    ("BOTTOMPADDING", (0, 0), (-1, 0), 12),
-                    ("GRID", (0, 0), (-1, -1), 0.5, colors.grey),
-                ]
+            table = Table(data)
+            table.setStyle(
+                TableStyle(
+                    [
+                        ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#0066CC")),
+                        ("TEXTCOLOR", (0, 0), (-1, 0), colors.whitesmoke),
+                        ("ALIGN", (0, 0), (-1, -1), "CENTER"),
+                        ("FONTNAME", (0, 0), (-1, 0), "Helvetica-Bold"),
+                        ("FONTSIZE", (0, 0), (-1, 0), 10),
+                        ("BOTTOMPADDING", (0, 0), (-1, 0), 12),
+                        ("GRID", (0, 0), (-1, -1), 0.5, colors.grey),
+                    ]
+                )
             )
-        )
-        elements.append(table)
+            elements.append(table)
 
         doc.build(elements)
         buffer.seek(0)
@@ -1461,18 +1490,28 @@ async def get_purchase_report(
     format: str = "json",
     current_user: User = Depends(get_current_user),
 ):
-    purchases = await db.purchases.find({}, {"_id": 0}).to_list(10000)
+    # Fetch purchases from inventory_purchases collection (not purchases)
+    purchases = await db.inventory_purchases.find({}, {"_id": 0}).to_list(10000)
 
-    if start_date:
-        start = datetime.fromisoformat(start_date)
-        purchases = [
-            p for p in purchases if datetime.fromisoformat(p["purchase_date"]) >= start
-        ]
-    if end_date:
-        end = datetime.fromisoformat(end_date).replace(hour=23, minute=59, second=59)
-        purchases = [
-            p for p in purchases if datetime.fromisoformat(p["purchase_date"]) <= end
-        ]
+    # Filter by date if provided (using purchase_date with [:10] normalization)
+    if start_date or end_date:
+        filtered_purchases = []
+        for purchase in purchases:
+            purchase_date_str = purchase.get("purchase_date", "")
+            if purchase_date_str:
+                try:
+                    purchase_date = purchase_date_str[:10]
+                    
+                    if start_date and purchase_date < start_date[:10]:
+                        continue
+                    if end_date and purchase_date > end_date[:10]:
+                        continue
+                    
+                    filtered_purchases.append(purchase)
+                except (ValueError, AttributeError):
+                    continue
+        
+        purchases = filtered_purchases
 
     if format == "csv":
         output = BytesIO()
@@ -1480,24 +1519,26 @@ async def get_purchase_report(
         writer.writerow(
             [
                 "Date",
+                "Category",
                 "Vendor",
-                "Raw Material",
-                "Quantity",
-                "Unit",
-                "Cost/Unit",
+                "Weight (kg)",
+                "Pieces",
+                "Cost/kg",
                 "Total Cost",
             ]
         )
+        if not purchases:
+            writer.writerow(["No records found for the selected date range", "", "", "", "", "", ""])
         for purchase in purchases:
             writer.writerow(
                 [
-                    purchase["purchase_date"],
-                    purchase["vendor_name"],
-                    purchase["raw_material_name"],
-                    purchase["quantity"],
-                    purchase["unit"],
-                    purchase["cost_per_unit"],
-                    purchase["total_cost"],
+                    purchase.get("purchase_date", ""),
+                    purchase.get("main_category_name", ""),
+                    purchase.get("vendor_name", ""),
+                    purchase.get("total_weight_kg", 0),
+                    purchase.get("total_pieces", 0),
+                    purchase.get("cost_per_kg", 0),
+                    purchase.get("total_cost", 0),
                 ]
             )
         output.seek(0)
@@ -1514,11 +1555,11 @@ async def get_purchase_report(
 
         headers = [
             "Date",
+            "Category",
             "Vendor",
-            "Raw Material",
-            "Quantity",
-            "Unit",
-            "Cost/Unit",
+            "Weight (kg)",
+            "Pieces",
+            "Cost/kg",
             "Total Cost",
         ]
         ws.append(headers)
@@ -1530,16 +1571,18 @@ async def get_purchase_report(
             )
             cell.alignment = Alignment(horizontal="center")
 
+        if not purchases:
+            ws.append(["No records found for the selected date range", "", "", "", "", "", ""])
         for purchase in purchases:
             ws.append(
                 [
-                    purchase["purchase_date"],
-                    purchase["vendor_name"],
-                    purchase["raw_material_name"],
-                    purchase["quantity"],
-                    purchase["unit"],
-                    purchase["cost_per_unit"],
-                    purchase["total_cost"],
+                    purchase.get("purchase_date", ""),
+                    purchase.get("main_category_name", ""),
+                    purchase.get("vendor_name", ""),
+                    purchase.get("total_weight_kg", 0),
+                    purchase.get("total_pieces", 0),
+                    purchase.get("cost_per_kg", 0),
+                    purchase.get("total_cost", 0),
                 ]
             )
 
@@ -1564,35 +1607,41 @@ async def get_purchase_report(
         elements.append(title)
         elements.append(Spacer(1, 0.3 * inch))
 
-        data = [
-            ["Date", "Vendor", "Raw Material", "Quantity", "Unit", "Cost/Unit", "Total"]
-        ]
-        for purchase in purchases:
-            data.append(
-                [
-                    purchase["purchase_date"][:10],
-                    purchase["vendor_name"][:20],
-                    purchase["raw_material_name"][:15],
-                    str(purchase["quantity"]),
-                    purchase["unit"],
-                    f"₹{purchase['cost_per_unit']:.2f}",
-                    f"₹{purchase['total_cost']:.2f}",
-                ]
-            )
+        if not purchases:
+            no_data_msg = Paragraph("No records found for the selected date range.", styles["Normal"])
+            elements.append(no_data_msg)
+        else:
+            data = [
+                ["Date", "Category", "Vendor", "Weight", "Pieces", "Cost/kg", "Total"]
+            ]
+            for purchase in purchases:
+                purchase_date = purchase.get("purchase_date", "")
+                data.append(
+                    [
+                        purchase_date[:10] if purchase_date else "",
+                        purchase.get("main_category_name", "")[:15],
+                        purchase.get("vendor_name", "")[:15],
+                        f"{purchase.get('total_weight_kg', 0):.2f}",
+                        str(purchase.get("total_pieces", 0)),
+                        f"₹{purchase.get('cost_per_kg', 0):.2f}",
+                        f"₹{purchase.get('total_cost', 0):.2f}",
+                    ]
+                )
 
-        table = Table(data)
-        table.setStyle(
-            TableStyle(
-                [
-                    ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#FF6600")),
-                    ("TEXTCOLOR", (0, 0), (-1, 0), colors.whitesmoke),
-                    ("ALIGN", (0, 0), (-1, -1), "CENTER"),
-                    ("FONTNAME", (0, 0), (-1, 0), "Helvetica-Bold"),
-                    ("GRID", (0, 0), (-1, -1), 0.5, colors.grey),
-                ]
+            table = Table(data)
+            table.setStyle(
+                TableStyle(
+                    [
+                        ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#FF6600")),
+                        ("TEXTCOLOR", (0, 0), (-1, 0), colors.whitesmoke),
+                        ("ALIGN", (0, 0), (-1, -1), "CENTER"),
+                        ("FONTNAME", (0, 0), (-1, 0), "Helvetica-Bold"),
+                        ("FONTSIZE", (0, 0), (-1, 0), 9),
+                        ("GRID", (0, 0), (-1, -1), 0.5, colors.grey),
+                    ]
+                )
             )
-        )
-        elements.append(table)
+            elements.append(table)
 
         doc.build(elements)
         buffer.seek(0)
