@@ -1,6 +1,17 @@
 import { useEffect, useState } from "react";
 import axios from "axios";
 import { API } from "../App";
+import {
+  Pagination,
+  PaginationContent,
+  PaginationItem,
+  PaginationLink,
+  PaginationNext,
+  PaginationPrevious,
+  PaginationEllipsis,
+} from "@/components/ui/pagination";
+
+const ITEMS_PER_PAGE = 10;
 
 const PurchaseHistory = () => {
   const [purchases, setPurchases] = useState([]);
@@ -13,6 +24,7 @@ const PurchaseHistory = () => {
   const [selectedCategory, setSelectedCategory] = useState("all");
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
+  const [currentPage, setCurrentPage] = useState(1);
   const [addPurchaseForm, setAddPurchaseForm] = useState({
     main_category_id: "",
     vendor_id: "",
@@ -221,12 +233,23 @@ const PurchaseHistory = () => {
     return <div className="flex justify-center items-center h-screen">Loading...</div>;
   }
 
+  // Pagination calculations
+  const totalPages = Math.ceil(purchases.length / ITEMS_PER_PAGE);
+  const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
+  const endIndex = startIndex + ITEMS_PER_PAGE;
+  const currentPurchases = purchases.slice(startIndex, endIndex);
+
+  const handlePageChange = (page) => {
+    setCurrentPage(page);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
   return (
     <div className="p-6">
       <div className="flex justify-between items-center mb-6">
         <div>
           <h1 className="text-2xl font-bold">Purchase History</h1>
-          <p className="text-gray-600">View and manage all inventory purchases</p>
+          <p className="text-gray-600">View and manage all inventory purchases ({purchases.length} total)</p>
         </div>
         {isAdmin && (
           <button
@@ -315,7 +338,7 @@ const PurchaseHistory = () => {
                   </td>
                 </tr>
               ) : (
-                purchases.map((purchase) => (
+                currentPurchases.map((purchase) => (
                   <tr key={purchase.id} className="hover:bg-gray-50">
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="text-sm font-medium text-gray-900">
@@ -365,6 +388,57 @@ const PurchaseHistory = () => {
           </table>
         </div>
       </div>
+
+      {/* Pagination */}
+      {totalPages > 1 && (
+        <div className="mt-8 flex justify-center">
+          <Pagination>
+            <PaginationContent>
+              <PaginationItem>
+                <PaginationPrevious
+                  onClick={() => currentPage > 1 && handlePageChange(currentPage - 1)}
+                  className={currentPage === 1 ? 'pointer-events-none opacity-50' : 'cursor-pointer'}
+                />
+              </PaginationItem>
+
+              {[...Array(totalPages)].map((_, index) => {
+                const page = index + 1;
+                if (
+                  page === 1 ||
+                  page === totalPages ||
+                  (page >= currentPage - 1 && page <= currentPage + 1)
+                ) {
+                  return (
+                    <PaginationItem key={page}>
+                      <PaginationLink
+                        onClick={() => handlePageChange(page)}
+                        isActive={currentPage === page}
+                        className="cursor-pointer"
+                      >
+                        {page}
+                      </PaginationLink>
+                    </PaginationItem>
+                  );
+                } else if (page === currentPage - 2 || page === currentPage + 2) {
+                  return (
+                    <PaginationItem key={page}>
+                      <PaginationEllipsis />
+                    </PaginationItem>
+                  );
+                }
+                return null;
+              })}
+
+              <PaginationItem>
+                <PaginationNext
+                  onClick={() => currentPage < totalPages && handlePageChange(currentPage + 1)}
+                  className={currentPage === totalPages ? 'pointer-events-none opacity-50' : 'cursor-pointer'}
+                />
+              </PaginationItem>
+            </PaginationContent>
+          </Pagination>
+        </div>
+      )}
 
       {showAddPurchase && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">

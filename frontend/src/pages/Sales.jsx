@@ -7,8 +7,19 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Pagination,
+  PaginationContent,
+  PaginationItem,
+  PaginationLink,
+  PaginationNext,
+  PaginationPrevious,
+  PaginationEllipsis,
+} from "@/components/ui/pagination";
 import { toast } from "sonner";
 import { TrendingUp, Calendar, Edit, Trash2, Plus } from "lucide-react";
+
+const ITEMS_PER_PAGE = 10;
 
 const Sales = () => {
   const [sales, setSales] = useState([]);
@@ -17,6 +28,7 @@ const Sales = () => {
   const [editingSale, setEditingSale] = useState(null);
   const [products, setProducts] = useState([]);
   const [customers, setCustomers] = useState([]);
+  const [currentPage, setCurrentPage] = useState(1);
   const [editFormData, setEditFormData] = useState({
     customer_id: "",
     customer_name: "",
@@ -175,13 +187,24 @@ const Sales = () => {
 
   const totalRevenue = sales.reduce((sum, sale) => sum + Number(sale.total || 0), 0);
 
+  // Pagination calculations
+  const totalPages = Math.ceil(sales.length / ITEMS_PER_PAGE);
+  const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
+  const endIndex = startIndex + ITEMS_PER_PAGE;
+  const currentSales = sales.slice(startIndex, endIndex);
+
+  const handlePageChange = (page) => {
+    setCurrentPage(page);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
   return (
     <div className="p-8" data-testid="sales-page">
       <div className="mb-8">
         <h1 className="text-4xl font-bold text-gray-800 mb-2" style={{ fontFamily: 'Space Grotesk, sans-serif' }}>
           Sales History
         </h1>
-        <p className="text-gray-600">View all transactions</p>
+        <p className="text-gray-600">View all transactions ({sales.length} total)</p>
       </div>
 
       {/* Revenue Card */}
@@ -201,7 +224,7 @@ const Sales = () => {
 
       {/* Sales List */}
       <div className="space-y-4">
-        {sales.map((sale) => (
+        {currentSales.map((sale) => (
           <Card key={sale.id} data-testid={`sale-${sale.id}`}>
             <CardHeader>
               <div className="flex justify-between items-start">
@@ -268,6 +291,58 @@ const Sales = () => {
       {sales.length === 0 && (
         <div className="text-center py-16">
           <p className="text-gray-500 text-lg">No sales yet. Start selling!</p>
+        </div>
+      )}
+
+      {/* Pagination */}
+      {totalPages > 1 && (
+        <div className="mt-8 flex justify-center">
+          <Pagination>
+            <PaginationContent>
+              <PaginationItem>
+                <PaginationPrevious
+                  onClick={() => currentPage > 1 && handlePageChange(currentPage - 1)}
+                  className={currentPage === 1 ? 'pointer-events-none opacity-50' : 'cursor-pointer'}
+                />
+              </PaginationItem>
+
+              {[...Array(totalPages)].map((_, index) => {
+                const page = index + 1;
+                // Show first page, last page, current page, and pages around current
+                if (
+                  page === 1 ||
+                  page === totalPages ||
+                  (page >= currentPage - 1 && page <= currentPage + 1)
+                ) {
+                  return (
+                    <PaginationItem key={page}>
+                      <PaginationLink
+                        onClick={() => handlePageChange(page)}
+                        isActive={currentPage === page}
+                        className="cursor-pointer"
+                      >
+                        {page}
+                      </PaginationLink>
+                    </PaginationItem>
+                  );
+                } else if (page === currentPage - 2 || page === currentPage + 2) {
+                  return (
+                    <PaginationItem key={page}>
+                      <PaginationEllipsis />
+                    </PaginationItem>
+                  );
+                }
+                return null;
+              })}
+
+              <PaginationItem>
+                <PaginationNext
+                  onClick={() => currentPage < totalPages && handlePageChange(currentPage + 1)}
+                  className={currentPage === totalPages ? 'pointer-events-none opacity-50' : 'cursor-pointer'}
+                />
+              </PaginationItem>
+            </PaginationContent>
+          </Pagination>
         </div>
       )}
 
