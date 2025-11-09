@@ -2855,11 +2855,17 @@ async def get_pos_sales(
     current_user: User = Depends(get_current_user),
 ):
     query = {}
-    if start_date and end_date:
-        query["sale_date"] = {
-            "$gte": datetime.fromisoformat(start_date),
-            "$lte": datetime.fromisoformat(end_date),
-        }
+    
+    if start_date or end_date:
+        date_filter = {}
+        if start_date:
+            start_dt = datetime.fromisoformat(start_date.replace('Z', '+00:00'))
+            date_filter["$gte"] = start_dt
+        if end_date:
+            end_dt = datetime.fromisoformat(end_date.replace('Z', '+00:00'))
+            date_filter["$lte"] = end_dt
+        
+        query["sale_date"] = date_filter
 
     sales = (
         await db.pos_sales.find(query, {"_id": 0})
