@@ -1264,10 +1264,10 @@ async def get_sales_report(
                         sale_date[:10] if sale_date else "",
                         sale.get("customer_name", "Walk-in")[:15],
                         str(len(sale.get("items", []))),
-                        f"₹{sale.get('subtotal', 0):.2f}",
-                        f"₹{sale.get('tax', 0):.2f}",
-                        f"₹{sale.get('discount', 0):.2f}",
-                        f"₹{sale.get('total', 0):.2f}",
+                        f"Rs {sale.get('subtotal', 0):.2f}",
+                        f"Rs {sale.get('tax', 0):.2f}",
+                        f"Rs {sale.get('discount', 0):.2f}",
+                        f"Rs {sale.get('total', 0):.2f}",
                         sale.get("payment_method", ""),
                     ]
                 )
@@ -1443,7 +1443,7 @@ async def get_inventory_report(
                     ptype,
                     str(product["stock_quantity"]),
                     product["unit"],
-                    f"₹{product['price_per_unit']:.0f}",
+                    f"Rs {product['price_per_unit']:.0f}",
                     status,
                 ]
             )
@@ -1623,8 +1623,8 @@ async def get_purchase_report(
                         purchase.get("vendor_name", "")[:15],
                         f"{purchase.get('total_weight_kg', 0):.2f}",
                         str(purchase.get("total_pieces", 0)),
-                        f"₹{purchase.get('cost_per_kg', 0):.2f}",
-                        f"₹{purchase.get('total_cost', 0):.2f}",
+                        f"Rs {purchase.get('cost_per_kg', 0):.2f}",
+                        f"Rs {purchase.get('total_cost', 0):.2f}",
                     ]
                 )
 
@@ -1754,9 +1754,9 @@ async def get_profit_loss_report(
 
         data = [
             ["Metric", "Amount"],
-            ["Total Revenue", f"₹{total_revenue:.2f}"],
-            ["Total Purchase Cost", f"₹{total_purchase_cost:.2f}"],
-            ["Gross Profit", f"₹{gross_profit:.2f}"],
+            ["Total Revenue", f"Rs {total_revenue:.2f}"],
+            ["Total Purchase Cost", f"Rs {total_purchase_cost:.2f}"],
+            ["Gross Profit", f"Rs {gross_profit:.2f}"],
             ["Profit Margin", f"{profit_margin:.2f}%"],
             ["", ""],
             ["Sales Count", str(len(sales))],
