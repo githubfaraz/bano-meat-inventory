@@ -11,6 +11,7 @@ import {
   PaginationPrevious,
   PaginationEllipsis,
 } from "@/components/ui/pagination";
+import { toast } from "sonner";
 
 const ITEMS_PER_PAGE = 10;
 
@@ -245,6 +246,39 @@ const PurchaseHistory = () => {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
+  const handleExport = async (format) => {
+    try {
+      const params = new URLSearchParams();
+      if (startDate) params.append('start_date', `${startDate}T00:00:00`);
+      if (endDate) params.append('end_date', `${endDate}T23:59:59`);
+      params.append('format', format);
+      
+      const url = `${API}/reports/purchases?${params.toString()}`;
+      const response = await axios.get(url, {
+        responseType: 'blob',
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
+        }
+      });
+      
+      const blob = new Blob([response.data]);
+      const downloadUrl = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = downloadUrl;
+      
+      const extension = format === 'excel' ? 'xlsx' : format;
+      link.download = `purchase_report.${extension}`;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(downloadUrl);
+      
+      toast.success(`Purchase report exported as ${format.toUpperCase()}`);
+    } catch (error) {
+      toast.error("Failed to export report");
+    }
+  };
+
   return (
     <div className="p-6">
       <div className="flex justify-between items-center mb-6">
@@ -262,51 +296,77 @@ const PurchaseHistory = () => {
         )}
       </div>
 
-      <div className="mb-6 grid grid-cols-1 md:grid-cols-4 gap-4">
-        <div>
-          <label className="block text-sm font-medium mb-2">Filter by Category</label>
-          <select
-            value={selectedCategory}
-            onChange={(e) => setSelectedCategory(e.target.value)}
-            className="border rounded-lg px-4 py-2 w-full"
-          >
-            <option value="all">All Categories</option>
-            {categories.map((cat) => (
-              <option key={cat.id} value={cat.id}>
-                {cat.name}
-              </option>
-            ))}
-          </select>
+      <div className="mb-6 bg-white rounded-lg shadow-md p-4">
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-4">
+          <div>
+            <label className="block text-sm font-medium mb-2">Filter by Category</label>
+            <select
+              value={selectedCategory}
+              onChange={(e) => setSelectedCategory(e.target.value)}
+              className="border rounded-lg px-4 py-2 w-full"
+            >
+              <option value="all">All Categories</option>
+              {categories.map((cat) => (
+                <option key={cat.id} value={cat.id}>
+                  {cat.name}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div>
+            <label className="block text-sm font-medium mb-2">Start Date</label>
+            <input
+              type="date"
+              value={startDate}
+              onChange={(e) => setStartDate(e.target.value)}
+              className="border rounded-lg px-4 py-2 w-full"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium mb-2">End Date</label>
+            <input
+              type="date"
+              value={endDate}
+              onChange={(e) => setEndDate(e.target.value)}
+              className="border rounded-lg px-4 py-2 w-full"
+            />
+          </div>
+          <div className="flex items-end">
+            <button
+              onClick={() => {
+                setStartDate("");
+                setEndDate("");
+                setSelectedCategory("all");
+                setCurrentPage(1);
+              }}
+              className="border border-gray-300 rounded-lg px-4 py-2 w-full hover:bg-gray-50 text-gray-700"
+            >
+              Clear Filters
+            </button>
+          </div>
         </div>
-        <div>
-          <label className="block text-sm font-medium mb-2">Start Date</label>
-          <input
-            type="date"
-            value={startDate}
-            onChange={(e) => setStartDate(e.target.value)}
-            className="border rounded-lg px-4 py-2 w-full"
-          />
-        </div>
-        <div>
-          <label className="block text-sm font-medium mb-2">End Date</label>
-          <input
-            type="date"
-            value={endDate}
-            onChange={(e) => setEndDate(e.target.value)}
-            className="border rounded-lg px-4 py-2 w-full"
-          />
-        </div>
-        <div className="flex items-end">
+        <div className="flex items-center gap-2 pt-4 border-t">
+          <svg className="h-4 w-4 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+          </svg>
+          <span className="text-sm text-gray-600 mr-2">Export:</span>
           <button
-            onClick={() => {
-              setStartDate("");
-              setEndDate("");
-              setSelectedCategory("all");
-              setCurrentPage(1);
-            }}
-            className="border border-gray-300 rounded-lg px-4 py-2 w-full hover:bg-gray-50 text-gray-700"
+            onClick={() => handleExport('csv')}
+            className="border border-gray-300 rounded px-3 py-1 text-sm hover:bg-gray-50"
           >
-            Clear Filters
+            CSV
+          </button>
+          <button
+            onClick={() => handleExport('excel')}
+            className="border border-gray-300 rounded px-3 py-1 text-sm hover:bg-gray-50"
+          >
+            Excel
+          </button>
+          <button
+            onClick={() => handleExport('pdf')}
+            className="border border-gray-300 rounded px-3 py-1 text-sm hover:bg-gray-50"
+          >
+            PDF
           </button>
         </div>
       </div>
