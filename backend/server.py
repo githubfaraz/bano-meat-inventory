@@ -1118,25 +1118,21 @@ async def get_sales_report(
     if start_date or end_date:
         from datetime import date
         
-        start_d = date.fromisoformat(start_date[:10]) if start_date else None
-        end_d = date.fromisoformat(end_date[:10]) if end_date else None
+        start_d = parse_date_flexible(start_date)
+        end_d = parse_date_flexible(end_date)
         
         filtered_sales = []
         for sale in sales:
             effective_date_str = sale.get("sale_date") or sale.get("created_at")
-            if effective_date_str:
-                try:
-                    effective_dt = datetime.fromisoformat(effective_date_str.replace('Z', '+00:00'))
-                    effective_date = effective_dt.date()
-                    
-                    if start_d and effective_date < start_d:
-                        continue
-                    if end_d and effective_date > end_d:
-                        continue
-                    
-                    filtered_sales.append(sale)
-                except (ValueError, AttributeError):
+            effective_date = parse_date_flexible(effective_date_str)
+            
+            if effective_date:
+                if start_d and effective_date < start_d:
                     continue
+                if end_d and effective_date > end_d:
+                    continue
+                
+                filtered_sales.append(sale)
         
         sales = filtered_sales
 
@@ -2923,28 +2919,24 @@ async def get_pos_sales(
     if start_date or end_date:
         from datetime import date
         
-        start_d = date.fromisoformat(start_date[:10]) if start_date else None
-        end_d = date.fromisoformat(end_date[:10]) if end_date else None
+        start_d = parse_date_flexible(start_date)
+        end_d = parse_date_flexible(end_date)
         
         filtered_sales = []
         for sale in sales:
             effective_date_str = sale.get("sale_date") or sale.get("created_at")
-            if effective_date_str:
-                try:
-                    effective_dt = datetime.fromisoformat(effective_date_str.replace('Z', '+00:00'))
-                    effective_date = effective_dt.date()
-                    
-                    if start_d and effective_date < start_d:
-                        continue
-                    if end_d and effective_date > end_d:
-                        continue
-                    
-                    filtered_sales.append(sale)
-                except (ValueError, AttributeError):
+            effective_date = parse_date_flexible(effective_date_str)
+            
+            if effective_date:
+                if start_d and effective_date < start_d:
                     continue
+                if end_d and effective_date > end_d:
+                    continue
+                
+                filtered_sales.append(sale)
         
         sales = filtered_sales
-        sales.sort(key=lambda s: s.get("sale_date") or s.get("created_at"), reverse=True)
+        sales.sort(key=lambda s: parse_date_flexible(s.get("sale_date") or s.get("created_at")) or date.min, reverse=True)
     else:
         sales.sort(key=lambda s: s.get("sale_date") or s.get("created_at"), reverse=True)
 
