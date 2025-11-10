@@ -1111,30 +1111,24 @@ async def get_sales_report(
     format: str = "json",
     current_user: User = Depends(get_current_user),
 ):
-    # Fetch sales from pos_sales collection (not sales)
-    sales = await db.pos_sales.find({}, {"_id": 0}).to_list(10000)
+    """
+    Generate sales reports with optional date filtering.
+    Uses MongoDB query filtering for efficiency (similar to inventory-purchases endpoint).
+    """
+    query = {}
 
-    # Filter by date if provided (using effective date logic: sale_date or created_at)
+    # Add date filtering to MongoDB query
     if start_date or end_date:
-        from datetime import date
-        
-        start_d = parse_date_flexible(start_date)
-        end_d = parse_date_flexible(end_date)
-        
-        filtered_sales = []
-        for sale in sales:
-            effective_date_str = sale.get("sale_date") or sale.get("created_at")
-            effective_date = parse_date_flexible(effective_date_str)
-            
-            if effective_date:
-                if start_d and effective_date < start_d:
-                    continue
-                if end_d and effective_date > end_d:
-                    continue
-                
-                filtered_sales.append(sale)
-        
-        sales = filtered_sales
+        date_filter = {}
+        if start_date:
+            # Extract date portion from ISO datetime string (YYYY-MM-DDTHH:MM:SS -> YYYY-MM-DD)
+            date_filter["$gte"] = start_date[:10]
+        if end_date:
+            date_filter["$lte"] = end_date[:10]
+        query["sale_date"] = date_filter
+
+    # Fetch sales from pos_sales collection with filtering and sorting
+    sales = await db.pos_sales.find(query, {"_id": 0}).sort("sale_date", -1).to_list(10000)
 
     if format == "csv":
         output = BytesIO()
@@ -2911,47 +2905,33 @@ async def get_pos_sales(
     main_category_id: Optional[str] = None,
     current_user: User = Depends(get_current_user),
 ):
+    """
+    Get POS sales with optional filtering by date range and category.
+    Uses MongoDB query filtering for efficiency (similar to inventory-purchases endpoint).
+    """
+    query = {}
+
+    # Add date filtering to MongoDB query
+    if start_date or end_date:
+        date_filter = {}
+        if start_date:
+            # Extract date portion from ISO datetime string (YYYY-MM-DDTHH:MM:SS -> YYYY-MM-DD)
+            date_filter["$gte"] = start_date[:10]
+        if end_date:
+            date_filter["$lte"] = end_date[:10]
+        query["sale_date"] = date_filter
+
+    # Add category filtering to MongoDB query
+    if main_category_id:
+        # Filter sales that have at least one item with the specified main_category_id
+        query["items.main_category_id"] = main_category_id
+
+    # Execute query with sorting by sale_date descending
     sales = (
-        await db.pos_sales.find({}, {"_id": 0})
+        await db.pos_sales.find(query, {"_id": 0})
+        .sort("sale_date", -1)
         .to_list(length=None)
     )
-    
-    if start_date or end_date:
-        from datetime import date
-        
-        start_d = parse_date_flexible(start_date)
-        end_d = parse_date_flexible(end_date)
-        
-        filtered_sales = []
-        for sale in sales:
-            effective_date_str = sale.get("sale_date") or sale.get("created_at")
-            effective_date = parse_date_flexible(effective_date_str)
-            
-            if effective_date:
-                if start_d and effective_date < start_d:
-                    continue
-                if end_d and effective_date > end_d:
-                    continue
-                
-                filtered_sales.append(sale)
-        
-        sales = filtered_sales
-        sales.sort(key=lambda s: parse_date_flexible(s.get("sale_date") or s.get("created_at")) or date.min, reverse=True)
-    else:
-        sales.sort(key=lambda s: s.get("sale_date") or s.get("created_at"), reverse=True)
-
-    # Filter by main_category_id if provided
-    if main_category_id:
-        filtered_sales = []
-        for sale in sales:
-            # Check if any item in the sale matches the category
-            has_category = any(
-                item.get("main_category_id") == main_category_id
-                for item in sale.get("items", [])
-            )
-            if has_category:
-                filtered_sales.append(sale)
-        return filtered_sales
 
     return sales
 
