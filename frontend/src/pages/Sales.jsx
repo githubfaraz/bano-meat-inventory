@@ -237,11 +237,32 @@ const Sales = () => {
     fetchSales();
   };
 
-  const handleClearFilter = () => {
+  const handleClearFilter = async () => {
     setStartDate("");
     setEndDate("");
     setCurrentPage(1);
-    setTimeout(() => fetchSales(), 0);
+
+    // Fetch sales directly without date filters
+    try {
+      const url = `${API}/pos-sales`;
+      const response = await axios.get(url);
+
+      const normalizedSales = Array.isArray(response.data) ? response.data.map(sale => ({
+        ...sale,
+        items: (sale.items || []).map(item => ({
+          product_id: item.derived_product_id || item.main_category_id || '',
+          product_name: item.derived_product_name || item.main_category_name || 'Unknown',
+          quantity: item.quantity_pieces != null && item.quantity_pieces > 0 ? item.quantity_pieces : item.quantity_kg || 0,
+          unit: item.quantity_pieces != null && item.quantity_pieces > 0 ? 'pcs' : 'kg',
+          price_per_unit: item.selling_price || 0,
+          total: item.total || 0
+        }))
+      })) : [];
+
+      setSales(normalizedSales);
+    } catch (error) {
+      toast.error("Failed to fetch sales");
+    }
   };
 
   const handleExport = async (format) => {
