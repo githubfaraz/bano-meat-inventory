@@ -1121,10 +1121,15 @@ async def get_sales_report(
     if start_date or end_date:
         date_filter = {}
         if start_date:
-            # Extract date portion from ISO datetime string (YYYY-MM-DDTHH:MM:SS -> YYYY-MM-DD)
-            date_filter["$gte"] = start_date[:10]
+            # Parse date string to datetime object (start of day in IST)
+            date_str = start_date[:10]  # Extract YYYY-MM-DD
+            start_dt = IST.localize(datetime.strptime(date_str, "%Y-%m-%d").replace(hour=0, minute=0, second=0))
+            date_filter["$gte"] = start_dt
         if end_date:
-            date_filter["$lte"] = end_date[:10]
+            # Parse date string to datetime object (end of day in IST)
+            date_str = end_date[:10]  # Extract YYYY-MM-DD
+            end_dt = IST.localize(datetime.strptime(date_str, "%Y-%m-%d").replace(hour=23, minute=59, second=59))
+            date_filter["$lte"] = end_dt
         query["sale_date"] = date_filter
 
     # Fetch sales from pos_sales collection with filtering and sorting
@@ -2915,10 +2920,15 @@ async def get_pos_sales(
     if start_date or end_date:
         date_filter = {}
         if start_date:
-            # Extract date portion from ISO datetime string (YYYY-MM-DDTHH:MM:SS -> YYYY-MM-DD)
-            date_filter["$gte"] = start_date[:10]
+            # Parse date string to datetime object (start of day in IST)
+            date_str = start_date[:10]  # Extract YYYY-MM-DD
+            start_dt = IST.localize(datetime.strptime(date_str, "%Y-%m-%d").replace(hour=0, minute=0, second=0))
+            date_filter["$gte"] = start_dt
         if end_date:
-            date_filter["$lte"] = end_date[:10]
+            # Parse date string to datetime object (end of day in IST)
+            date_str = end_date[:10]  # Extract YYYY-MM-DD
+            end_dt = IST.localize(datetime.strptime(date_str, "%Y-%m-%d").replace(hour=23, minute=59, second=59))
+            date_filter["$lte"] = end_dt
         query["sale_date"] = date_filter
 
     # Add category filtering to MongoDB query
