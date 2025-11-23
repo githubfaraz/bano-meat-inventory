@@ -1118,18 +1118,15 @@ async def get_sales_report(
     query = {}
 
     # Add date filtering to MongoDB query
+    # Note: sale_date is stored as ISO string (e.g., "2025-11-23T14:30:00+05:30")
     if start_date or end_date:
         date_filter = {}
         if start_date:
-            # Parse date string to datetime object (start of day in IST)
-            date_str = start_date[:10]  # Extract YYYY-MM-DD
-            start_dt = IST.localize(datetime.strptime(date_str, "%Y-%m-%d").replace(hour=0, minute=0, second=0))
-            date_filter["$gte"] = start_dt
+            # Start of day: "2025-11-23T00:00:00"
+            date_filter["$gte"] = start_date[:10] + "T00:00:00"
         if end_date:
-            # Parse date string to datetime object (end of day in IST)
-            date_str = end_date[:10]  # Extract YYYY-MM-DD
-            end_dt = IST.localize(datetime.strptime(date_str, "%Y-%m-%d").replace(hour=23, minute=59, second=59))
-            date_filter["$lte"] = end_dt
+            # End of day: use T99 to catch all times on that day (lexicographic comparison)
+            date_filter["$lte"] = end_date[:10] + "T99:99:99"
         query["sale_date"] = date_filter
 
     # Fetch sales from pos_sales collection with filtering and sorting
@@ -2917,18 +2914,15 @@ async def get_pos_sales(
     query = {}
 
     # Add date filtering to MongoDB query
+    # Note: sale_date is stored as ISO string (e.g., "2025-11-23T14:30:00+05:30")
     if start_date or end_date:
         date_filter = {}
         if start_date:
-            # Parse date string to datetime object (start of day in IST)
-            date_str = start_date[:10]  # Extract YYYY-MM-DD
-            start_dt = IST.localize(datetime.strptime(date_str, "%Y-%m-%d").replace(hour=0, minute=0, second=0))
-            date_filter["$gte"] = start_dt
+            # Start of day: "2025-11-23T00:00:00"
+            date_filter["$gte"] = start_date[:10] + "T00:00:00"
         if end_date:
-            # Parse date string to datetime object (end of day in IST)
-            date_str = end_date[:10]  # Extract YYYY-MM-DD
-            end_dt = IST.localize(datetime.strptime(date_str, "%Y-%m-%d").replace(hour=23, minute=59, second=59))
-            date_filter["$lte"] = end_dt
+            # End of day: use T99 to catch all times on that day (lexicographic comparison)
+            date_filter["$lte"] = end_date[:10] + "T99:99:99"
         query["sale_date"] = date_filter
 
     # Add category filtering to MongoDB query
