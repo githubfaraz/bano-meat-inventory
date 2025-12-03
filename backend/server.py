@@ -199,6 +199,10 @@ class Sale(BaseModel):
 class DashboardStats(BaseModel):
     total_sales_today: float
     total_sales_month: float
+    total_purchases_today: float
+    total_purchases_month: float
+    profit_today: float
+    profit_month: float
     low_stock_items: int
     total_customers: int
     total_products: int
@@ -775,11 +779,13 @@ async def create_sale(
             )
 
     sale_data = sale_input.model_dump()
-    
-    created_at = datetime.now()
+
+    created_at = get_ist_now()
     if hasattr(sale_input, 'sale_date') and sale_input.sale_date:
         created_at = datetime.fromisoformat(sale_input.sale_date)
-    
+        if created_at.tzinfo is None:
+            created_at = IST.localize(created_at)
+
     sale = Sale(
         **sale_data,
         created_by=current_user.id,
@@ -906,24 +912,51 @@ async def update_sale(sale_id: str, sale_input: SaleCreate, current_user: User =
 
 @api_router.get("/dashboard/stats", response_model=DashboardStats)
 async def get_dashboard_stats(current_user: User = Depends(get_current_user)):
-    # Today's sales
+    # Date ranges for filtering
     today_start = get_ist_now().replace(hour=0, minute=0, second=0, microsecond=0)
-    today_sales = await db.sales.find({}, {"_id": 0}).to_list(10000)
-    total_today = sum(
-        s["total"]
-        for s in today_sales
-        if datetime.fromisoformat(s["created_at"]) >= today_start
-    )
-
-    # Month's sales
     month_start = get_ist_now().replace(
         day=1, hour=0, minute=0, second=0, microsecond=0
     )
-    total_month = sum(
-        s["total"]
-        for s in today_sales
-        if datetime.fromisoformat(s["created_at"]) >= month_start
-    )
+
+    # Fetch all sales
+    all_sales = await db.sales.find({}, {"_id": 0}).to_list(10000)
+
+    # Calculate today's and month's sales
+    total_sales_today = 0
+    total_sales_month = 0
+
+    for s in all_sales:
+        sale_date = datetime.fromisoformat(s["created_at"])
+        # Ensure timezone-aware comparison
+        if sale_date.tzinfo is None:
+            sale_date = IST.localize(sale_date)
+
+        if sale_date >= today_start:
+            total_sales_today += s["total"]
+        if sale_date >= month_start:
+            total_sales_month += s["total"]
+
+    # Fetch all purchases
+    all_purchases = await db.purchases.find({}, {"_id": 0}).to_list(10000)
+
+    # Calculate today's and month's purchases
+    total_purchases_today = 0
+    total_purchases_month = 0
+
+    for p in all_purchases:
+        purchase_date = datetime.fromisoformat(p["purchase_date"])
+        # Ensure timezone-aware comparison
+        if purchase_date.tzinfo is None:
+            purchase_date = IST.localize(purchase_date)
+
+        if purchase_date >= today_start:
+            total_purchases_today += p["total_cost"]
+        if purchase_date >= month_start:
+            total_purchases_month += p["total_cost"]
+
+    # Calculate profit (Sales - Purchase Cost)
+    profit_today = total_sales_today - total_purchases_today
+    profit_month = total_sales_month - total_purchases_month
 
     # Low stock items
     products = await db.products.find({}, {"_id": 0}).to_list(1000)
@@ -941,12 +974,19 @@ async def get_dashboard_stats(current_user: User = Depends(get_current_user)):
     )
     for s in recent:
         if isinstance(s.get("created_at"), str):
-            s["created_at"] = datetime.fromisoformat(s["created_at"])
+            sale_date = datetime.fromisoformat(s["created_at"])
+            if sale_date.tzinfo is None:
+                sale_date = IST.localize(sale_date)
+            s["created_at"] = sale_date
         s["items"] = [SaleItem(**item) for item in s["items"]]
 
     return DashboardStats(
-        total_sales_today=total_today,
-        total_sales_month=total_month,
+        total_sales_today=total_sales_today,
+        total_sales_month=total_sales_month,
+        total_purchases_today=total_purchases_today,
+        total_purchases_month=total_purchases_month,
+        profit_today=profit_today,
+        profit_month=profit_month,
         low_stock_items=low_stock_count,
         total_customers=total_customers,
         total_products=total_products,

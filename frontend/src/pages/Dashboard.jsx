@@ -3,7 +3,7 @@ import axios from "axios";
 import { API } from "@/App";
 import { formatDateTime } from "../lib/utils";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { DollarSign, Package, Users, AlertTriangle, Weight } from "lucide-react";
+import { DollarSign, ShoppingCart, TrendingUp, Weight } from "lucide-react";
 import { toast } from "sonner";
 
 // New Inventory Summary Component
@@ -140,7 +140,7 @@ const Dashboard = () => {
       </div>
 
       {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
         <Card className="bg-gradient-to-br from-emerald-50 to-teal-50 border-emerald-200">
           <CardHeader className="flex flex-row items-center justify-between pb-2">
             <CardTitle className="text-sm font-medium text-gray-700">Today's Sales</CardTitle>
@@ -165,26 +165,50 @@ const Dashboard = () => {
           </CardContent>
         </Card>
 
-        <Card className="bg-gradient-to-br from-purple-50 to-pink-50 border-purple-200">
+        <Card className="bg-gradient-to-br from-orange-50 to-amber-50 border-orange-200">
           <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium text-gray-700">Total Products</CardTitle>
-            <Package className="h-5 w-5 text-purple-600" />
+            <CardTitle className="text-sm font-medium text-gray-700">Today's Purchase</CardTitle>
+            <ShoppingCart className="h-5 w-5 text-orange-600" />
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-bold text-purple-700" data-testid="stats-total-products">
-              {stats?.total_products || 0}
+            <div className="text-3xl font-bold text-orange-700" data-testid="stats-today-purchases">
+              ₹{stats?.total_purchases_today?.toFixed(2) || "0.00"}
             </div>
           </CardContent>
         </Card>
 
-        <Card className="bg-gradient-to-br from-orange-50 to-red-50 border-orange-200">
+        <Card className="bg-gradient-to-br from-purple-50 to-pink-50 border-purple-200">
           <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium text-gray-700">Low Stock Alert</CardTitle>
-            <AlertTriangle className="h-5 w-5 text-orange-600" />
+            <CardTitle className="text-sm font-medium text-gray-700">Monthly Purchase</CardTitle>
+            <ShoppingCart className="h-5 w-5 text-purple-600" />
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-bold text-orange-700" data-testid="stats-low-stock">
-              {stats?.low_stock_items || 0}
+            <div className="text-3xl font-bold text-purple-700" data-testid="stats-monthly-purchases">
+              ₹{stats?.total_purchases_month?.toFixed(2) || "0.00"}
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="bg-gradient-to-br from-green-50 to-emerald-50 border-green-200">
+          <CardHeader className="flex flex-row items-center justify-between pb-2">
+            <CardTitle className="text-sm font-medium text-gray-700">Today's Profit</CardTitle>
+            <TrendingUp className="h-5 w-5 text-green-600" />
+          </CardHeader>
+          <CardContent>
+            <div className={`text-3xl font-bold ${stats?.profit_today >= 0 ? 'text-green-700' : 'text-red-700'}`} data-testid="stats-today-profit">
+              ₹{stats?.profit_today?.toFixed(2) || "0.00"}
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="bg-gradient-to-br from-teal-50 to-cyan-50 border-teal-200">
+          <CardHeader className="flex flex-row items-center justify-between pb-2">
+            <CardTitle className="text-sm font-medium text-gray-700">Monthly Profit</CardTitle>
+            <TrendingUp className="h-5 w-5 text-teal-600" />
+          </CardHeader>
+          <CardContent>
+            <div className={`text-3xl font-bold ${stats?.profit_month >= 0 ? 'text-teal-700' : 'text-red-700'}`} data-testid="stats-monthly-profit">
+              ₹{stats?.profit_month?.toFixed(2) || "0.00"}
             </div>
           </CardContent>
         </Card>
