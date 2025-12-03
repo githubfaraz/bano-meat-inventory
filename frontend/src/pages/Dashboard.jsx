@@ -5,6 +5,7 @@ import { formatDateTime } from "../lib/utils";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { DollarSign, ShoppingCart, TrendingUp, Weight } from "lucide-react";
 import { toast } from "sonner";
+import ErrorBoundary from "@/components/ErrorBoundary";
 
 // New Inventory Summary Component
 const InventorySummarySection = () => {
@@ -246,7 +247,9 @@ const Dashboard = () => {
       </div>
 
       {/* Inventory Summary - New Section */}
-      <InventorySummarySection />
+      <ErrorBoundary>
+        <InventorySummarySection />
+      </ErrorBoundary>
 
 
       {/* Recent Sales */}
@@ -289,4 +292,11 @@ const Dashboard = () => {
   );
 };
 
-export default Dashboard;
+// Wrap Dashboard with Error Boundary
+const DashboardWithErrorBoundary = () => (
+  <ErrorBoundary>
+    <Dashboard />
+  </ErrorBoundary>
+);
+
+export default DashboardWithErrorBoundary;
