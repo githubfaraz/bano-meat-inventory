@@ -106,6 +106,7 @@ const InventorySummarySection = () => {
 const Dashboard = () => {
   const [stats, setStats] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
   useEffect(() => {
     fetchStats();
@@ -114,9 +115,14 @@ const Dashboard = () => {
   const fetchStats = async () => {
     try {
       const response = await axios.get(`${API}/dashboard/stats`);
+      console.log("Dashboard stats response:", response.data);
       setStats(response.data);
+      setError(null);
     } catch (error) {
-      toast.error("Failed to fetch dashboard stats");
+      console.error("Dashboard stats error:", error);
+      const errorMsg = error.response?.data?.detail || error.message || "Failed to fetch dashboard stats";
+      setError(errorMsg);
+      toast.error(errorMsg);
     } finally {
       setLoading(false);
     }
@@ -126,6 +132,31 @@ const Dashboard = () => {
     return (
       <div className="flex items-center justify-center h-screen">
         <p>Loading dashboard...</p>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="p-8">
+        <div className="bg-red-50 border border-red-200 rounded-lg p-6">
+          <h2 className="text-xl font-bold text-red-800 mb-2">Error Loading Dashboard</h2>
+          <p className="text-red-600">{error}</p>
+          <button
+            onClick={fetchStats}
+            className="mt-4 px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700"
+          >
+            Retry
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  if (!stats) {
+    return (
+      <div className="flex items-center justify-center h-screen">
+        <p>No data available</p>
       </div>
     );
   }

@@ -912,86 +912,113 @@ async def update_sale(sale_id: str, sale_input: SaleCreate, current_user: User =
 
 @api_router.get("/dashboard/stats", response_model=DashboardStats)
 async def get_dashboard_stats(current_user: User = Depends(get_current_user)):
-    # Date ranges for filtering
-    today_start = get_ist_now().replace(hour=0, minute=0, second=0, microsecond=0)
-    month_start = get_ist_now().replace(
-        day=1, hour=0, minute=0, second=0, microsecond=0
-    )
+    try:
+        # Date ranges for filtering
+        today_start = get_ist_now().replace(hour=0, minute=0, second=0, microsecond=0)
+        month_start = get_ist_now().replace(
+            day=1, hour=0, minute=0, second=0, microsecond=0
+        )
 
-    # Fetch all sales
-    all_sales = await db.sales.find({}, {"_id": 0}).to_list(10000)
+        # Fetch all sales
+        all_sales = await db.sales.find({}, {"_id": 0}).to_list(10000)
 
-    # Calculate today's and month's sales
-    total_sales_today = 0
-    total_sales_month = 0
+        # Calculate today's and month's sales
+        total_sales_today = 0
+        total_sales_month = 0
 
-    for s in all_sales:
-        sale_date = datetime.fromisoformat(s["created_at"])
-        # Ensure timezone-aware comparison
-        if sale_date.tzinfo is None:
-            sale_date = IST.localize(sale_date)
+        for s in all_sales:
+            try:
+                sale_date = datetime.fromisoformat(s["created_at"])
+                # Ensure timezone-aware comparison
+                if sale_date.tzinfo is None:
+                    sale_date = IST.localize(sale_date)
 
-        if sale_date >= today_start:
-            total_sales_today += s["total"]
-        if sale_date >= month_start:
-            total_sales_month += s["total"]
+                if sale_date >= today_start:
+                    total_sales_today += s["total"]
+                if sale_date >= month_start:
+                    total_sales_month += s["total"]
+            except Exception as e:
+                logging.warning(f"Error processing sale date: {e}")
+                continue
 
-    # Fetch all purchases
-    all_purchases = await db.purchases.find({}, {"_id": 0}).to_list(10000)
+        # Fetch all purchases
+        all_purchases = await db.purchases.find({}, {"_id": 0}).to_list(10000)
 
-    # Calculate today's and month's purchases
-    total_purchases_today = 0
-    total_purchases_month = 0
+        # Calculate today's and month's purchases
+        total_purchases_today = 0
+        total_purchases_month = 0
 
-    for p in all_purchases:
-        purchase_date = datetime.fromisoformat(p["purchase_date"])
-        # Ensure timezone-aware comparison
-        if purchase_date.tzinfo is None:
-            purchase_date = IST.localize(purchase_date)
+        for p in all_purchases:
+            try:
+                # Handle both 'purchase_date' field
+                purchase_date_str = p.get("purchase_date")
+                if not purchase_date_str:
+                    continue
 
-        if purchase_date >= today_start:
-            total_purchases_today += p["total_cost"]
-        if purchase_date >= month_start:
-            total_purchases_month += p["total_cost"]
+                if isinstance(purchase_date_str, str):
+                    purchase_date = datetime.fromisoformat(purchase_date_str)
+                elif isinstance(purchase_date_str, datetime):
+                    purchase_date = purchase_date_str
+                else:
+                    continue
 
-    # Calculate profit (Sales - Purchase Cost)
-    profit_today = total_sales_today - total_purchases_today
-    profit_month = total_sales_month - total_purchases_month
+                # Ensure timezone-aware comparison
+                if purchase_date.tzinfo is None:
+                    purchase_date = IST.localize(purchase_date)
 
-    # Low stock items
-    products = await db.products.find({}, {"_id": 0}).to_list(1000)
-    low_stock_count = sum(
-        1 for p in products if p["stock_quantity"] <= p["reorder_level"]
-    )
+                if purchase_date >= today_start:
+                    total_purchases_today += p.get("total_cost", 0)
+                if purchase_date >= month_start:
+                    total_purchases_month += p.get("total_cost", 0)
+            except Exception as e:
+                logging.warning(f"Error processing purchase date: {e}")
+                continue
 
-    # Counts
-    total_customers = await db.customers.count_documents({})
-    total_products = await db.products.count_documents({})
+        # Calculate profit (Sales - Purchase Cost)
+        profit_today = total_sales_today - total_purchases_today
+        profit_month = total_sales_month - total_purchases_month
 
-    # Recent sales
-    recent = (
-        await db.sales.find({}, {"_id": 0}).sort("created_at", -1).limit(5).to_list(5)
-    )
-    for s in recent:
-        if isinstance(s.get("created_at"), str):
-            sale_date = datetime.fromisoformat(s["created_at"])
-            if sale_date.tzinfo is None:
-                sale_date = IST.localize(sale_date)
-            s["created_at"] = sale_date
-        s["items"] = [SaleItem(**item) for item in s["items"]]
+        # Low stock items
+        products = await db.products.find({}, {"_id": 0}).to_list(1000)
+        low_stock_count = sum(
+            1 for p in products if p.get("stock_quantity", 0) <= p.get("reorder_level", 0)
+        )
 
-    return DashboardStats(
-        total_sales_today=total_sales_today,
-        total_sales_month=total_sales_month,
-        total_purchases_today=total_purchases_today,
-        total_purchases_month=total_purchases_month,
-        profit_today=profit_today,
-        profit_month=profit_month,
-        low_stock_items=low_stock_count,
-        total_customers=total_customers,
-        total_products=total_products,
-        recent_sales=[Sale(**s) for s in recent],
-    )
+        # Counts
+        total_customers = await db.customers.count_documents({})
+        total_products = await db.products.count_documents({})
+
+        # Recent sales
+        recent = (
+            await db.sales.find({}, {"_id": 0}).sort("created_at", -1).limit(5).to_list(5)
+        )
+        for s in recent:
+            try:
+                if isinstance(s.get("created_at"), str):
+                    sale_date = datetime.fromisoformat(s["created_at"])
+                    if sale_date.tzinfo is None:
+                        sale_date = IST.localize(sale_date)
+                    s["created_at"] = sale_date
+                s["items"] = [SaleItem(**item) for item in s["items"]]
+            except Exception as e:
+                logging.warning(f"Error processing recent sale: {e}")
+                continue
+
+        return DashboardStats(
+            total_sales_today=total_sales_today,
+            total_sales_month=total_sales_month,
+            total_purchases_today=total_purchases_today,
+            total_purchases_month=total_purchases_month,
+            profit_today=profit_today,
+            profit_month=profit_month,
+            low_stock_items=low_stock_count,
+            total_customers=total_customers,
+            total_products=total_products,
+            recent_sales=[Sale(**s) for s in recent],
+        )
+    except Exception as e:
+        logging.error(f"Error in dashboard stats: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Error fetching dashboard stats: {str(e)}")
 
 
 # ========== PURCHASES ==========
