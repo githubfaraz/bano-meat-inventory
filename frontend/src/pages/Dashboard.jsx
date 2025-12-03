@@ -179,7 +179,7 @@ const Dashboard = () => {
           </CardHeader>
           <CardContent>
             <div className="text-3xl font-bold text-emerald-700" data-testid="stats-today-sales">
-              ₹{stats?.total_sales_today?.toFixed(2) || "0.00"}
+              ₹{(stats?.total_sales_today ?? 0).toFixed(2)}
             </div>
           </CardContent>
         </Card>
@@ -191,7 +191,7 @@ const Dashboard = () => {
           </CardHeader>
           <CardContent>
             <div className="text-3xl font-bold text-blue-700" data-testid="stats-monthly-sales">
-              ₹{stats?.total_sales_month?.toFixed(2) || "0.00"}
+              ₹{(stats?.total_sales_month ?? 0).toFixed(2)}
             </div>
           </CardContent>
         </Card>
@@ -203,7 +203,7 @@ const Dashboard = () => {
           </CardHeader>
           <CardContent>
             <div className="text-3xl font-bold text-orange-700" data-testid="stats-today-purchases">
-              ₹{stats?.total_purchases_today?.toFixed(2) || "0.00"}
+              ₹{(stats?.total_purchases_today ?? 0).toFixed(2)}
             </div>
           </CardContent>
         </Card>
@@ -215,7 +215,7 @@ const Dashboard = () => {
           </CardHeader>
           <CardContent>
             <div className="text-3xl font-bold text-purple-700" data-testid="stats-monthly-purchases">
-              ₹{stats?.total_purchases_month?.toFixed(2) || "0.00"}
+              ₹{(stats?.total_purchases_month ?? 0).toFixed(2)}
             </div>
           </CardContent>
         </Card>
@@ -226,8 +226,8 @@ const Dashboard = () => {
             <TrendingUp className="h-5 w-5 text-green-600" />
           </CardHeader>
           <CardContent>
-            <div className={`text-3xl font-bold ${stats?.profit_today >= 0 ? 'text-green-700' : 'text-red-700'}`} data-testid="stats-today-profit">
-              ₹{stats?.profit_today?.toFixed(2) || "0.00"}
+            <div className={`text-3xl font-bold ${(stats?.profit_today ?? 0) >= 0 ? 'text-green-700' : 'text-red-700'}`} data-testid="stats-today-profit">
+              ₹{(stats?.profit_today ?? 0).toFixed(2)}
             </div>
           </CardContent>
         </Card>
@@ -238,8 +238,8 @@ const Dashboard = () => {
             <TrendingUp className="h-5 w-5 text-teal-600" />
           </CardHeader>
           <CardContent>
-            <div className={`text-3xl font-bold ${stats?.profit_month >= 0 ? 'text-teal-700' : 'text-red-700'}`} data-testid="stats-monthly-profit">
-              ₹{stats?.profit_month?.toFixed(2) || "0.00"}
+            <div className={`text-3xl font-bold ${(stats?.profit_month ?? 0) >= 0 ? 'text-teal-700' : 'text-red-700'}`} data-testid="stats-monthly-profit">
+              ₹{(stats?.profit_month ?? 0).toFixed(2)}
             </div>
           </CardContent>
         </Card>
@@ -259,23 +259,23 @@ const Dashboard = () => {
             <div className="space-y-4">
               {stats.recent_sales.map((sale) => (
                 <div
-                  key={sale.id}
+                  key={sale?.id || Math.random()}
                   className="flex items-center justify-between p-4 bg-gray-50 rounded-lg"
-                  data-testid={`recent-sale-${sale.id}`}
+                  data-testid={`recent-sale-${sale?.id}`}
                 >
                   <div>
                     <p className="font-semibold text-gray-800">
-                      {sale.customer_name || "Walk-in Customer"}
+                      {sale?.customer_name || "Walk-in Customer"}
                     </p>
                     <p className="text-sm text-gray-600">
-                      {formatDateTime(sale.created_at)}
+                      {sale?.created_at ? formatDateTime(sale.created_at) : "N/A"}
                     </p>
                     <p className="text-xs text-gray-500">
-                      {sale.items.length} item(s) • {sale.payment_method.toUpperCase()}
+                      {sale?.items?.length || 0} item(s) • {sale?.payment_method?.toUpperCase() || "N/A"}
                     </p>
                   </div>
                   <div className="text-right">
-                    <p className="text-lg font-bold text-emerald-600">₹{sale.total.toFixed(2)}</p>
+                    <p className="text-lg font-bold text-emerald-600">₹{(sale?.total ?? 0).toFixed(2)}</p>
                   </div>
                 </div>
               ))}
