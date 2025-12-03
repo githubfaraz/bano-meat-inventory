@@ -3,7 +3,7 @@ import axios from "axios";
 import { API } from "@/App";
 import { formatDateTime } from "../lib/utils";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { DollarSign, ShoppingCart, TrendingUp, Weight } from "lucide-react";
+import { DollarSign, ShoppingCart, TrendingUp, Weight, AlertTriangle } from "lucide-react";
 import { toast } from "sonner";
 import ErrorBoundary from "@/components/ErrorBoundary";
 
