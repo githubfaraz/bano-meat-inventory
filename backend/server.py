@@ -3010,9 +3010,7 @@ async def get_pos_sales(
 @api_router.put("/pos-sales/{sale_id}")
 async def update_pos_sale(
     sale_id: str,
-    payment_method: Optional[str] = None,
-    discount: Optional[float] = None,
-    tax: Optional[float] = None,
+    sale_data: dict,
     current_user: User = Depends(get_current_user),
 ):
     # Check if user is admin
@@ -3020,31 +3018,129 @@ async def update_pos_sale(
     if not user_doc.get("is_admin", False):
         raise HTTPException(status_code=403, detail="Only admin can edit sales")
 
-    # Get the sale
-    sale = await db.pos_sales.find_one({"id": sale_id}, {"_id": 0})
-    if not sale:
+    # Get the existing sale
+    existing_sale = await db.pos_sales.find_one({"id": sale_id}, {"_id": 0})
+    if not existing_sale:
         raise HTTPException(status_code=404, detail="Sale not found")
 
-    update_fields = {}
-    if payment_method is not None:
-        update_fields["payment_method"] = payment_method
-    if discount is not None:
-        update_fields["discount"] = discount
-    if tax is not None:
-        update_fields["tax"] = tax
+    # Handle inventory adjustments for item changes
+    old_items = existing_sale.get("items", [])
+    new_items = sale_data.get("items", [])
 
-    if discount is not None or tax is not None:
-        subtotal = sale.get("subtotal", 0)
-        new_discount = discount if discount is not None else sale.get("discount", 0)
-        new_tax = tax if tax is not None else sale.get("tax", 0)
-        new_total = subtotal - new_discount + new_tax
-        update_fields["total"] = new_total
+    # Create a mapping of old items by product ID for comparison
+    old_items_map = {}
+    for item in old_items:
+        product_id = item.get('derived_product_id') or item.get('product_id')
+        if product_id:
+            old_items_map[product_id] = item.get('quantity_kg', 0)
 
-    if not update_fields:
-        raise HTTPException(status_code=400, detail="No fields to update")
+    # Process new items and adjust inventory
+    for new_item in new_items:
+        product_id = new_item.get('derived_product_id') or new_item.get('product_id')
+        if not product_id:
+            continue
+
+        # Get the derived product to find main category
+        derived_product = await db.derived_products.find_one({"id": product_id}, {"_id": 0})
+        if not derived_product:
+            continue
+
+        main_category_id = derived_product.get("main_category_id")
+        if not main_category_id:
+            continue
+
+        # Calculate quantity difference
+        new_qty = new_item.get('quantity', 0)
+        old_qty = old_items_map.get(product_id, 0)
+        qty_delta = new_qty - old_qty
+
+        if qty_delta != 0:
+            # Adjust main category inventory
+            main_category = await db.main_categories.find_one({"id": main_category_id}, {"_id": 0})
+            if main_category:
+                new_weight = main_category.get("total_weight_kg", 0) - qty_delta
+
+                if new_weight < 0:
+                    raise HTTPException(
+                        status_code=400,
+                        detail=f"Insufficient stock for {derived_product.get('name')}. Available: {main_category.get('total_weight_kg', 0)} kg"
+                    )
+
+                await db.main_categories.update_one(
+                    {"id": main_category_id},
+                    {"$set": {"total_weight_kg": new_weight}}
+                )
+
+        # Remove from old items map once processed
+        if product_id in old_items_map:
+            del old_items_map[product_id]
+
+    # Restore inventory for items that were removed from the sale
+    for product_id, old_qty in old_items_map.items():
+        derived_product = await db.derived_products.find_one({"id": product_id}, {"_id": 0})
+        if derived_product:
+            main_category_id = derived_product.get("main_category_id")
+            if main_category_id:
+                await db.main_categories.update_one(
+                    {"id": main_category_id},
+                    {"$inc": {"total_weight_kg": old_qty}}
+                )
+
+    # Handle customer total purchases update
+    old_customer_id = existing_sale.get("customer_id")
+    new_customer_id = sale_data.get("customer_id")
+    old_total = existing_sale.get("total", 0)
+    new_total = sale_data.get("total", 0)
+
+    if old_customer_id and old_customer_id == new_customer_id:
+        # Same customer, update the difference
+        total_delta = new_total - old_total
+        if total_delta != 0:
+            await db.customers.update_one(
+                {"id": old_customer_id},
+                {"$inc": {"total_purchases": total_delta}}
+            )
+    elif old_customer_id and old_customer_id != new_customer_id:
+        # Customer changed, reverse old and add new
+        await db.customers.update_one(
+            {"id": old_customer_id},
+            {"$inc": {"total_purchases": -old_total}}
+        )
+        if new_customer_id:
+            await db.customers.update_one(
+                {"id": new_customer_id},
+                {"$inc": {"total_purchases": new_total}}
+            )
+
+    # Prepare update data
+    update_data = {
+        "customer_id": sale_data.get("customer_id"),
+        "customer_name": sale_data.get("customer_name"),
+        "items": new_items,
+        "subtotal": sale_data.get("subtotal", 0),
+        "discount": sale_data.get("discount", 0),
+        "tax": sale_data.get("tax", 0),
+        "total": new_total,
+        "payment_method": sale_data.get("payment_method", "cash"),
+    }
+
+    # Handle sale date if provided
+    if sale_data.get("sale_date"):
+        sale_date = sale_data["sale_date"]
+        if isinstance(sale_date, str):
+            try:
+                parsed_date = datetime.fromisoformat(sale_date)
+                if parsed_date.tzinfo is None:
+                    parsed_date = IST.localize(parsed_date)
+                update_data["created_at"] = parsed_date.isoformat()
+            except:
+                pass
 
     # Update the sale
-    result = await db.pos_sales.update_one({"id": sale_id}, {"$set": update_fields})
+    result = await db.pos_sales.update_one(
+        {"id": sale_id},
+        {"$set": update_data}
+    )
 
     if result.matched_count == 0:
         raise HTTPException(status_code=404, detail="Sale not found")
