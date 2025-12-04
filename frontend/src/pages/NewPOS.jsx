@@ -207,10 +207,12 @@ const NewPOS = () => {
 
   const printReceipt = (saleData) => {
     const totals = calculateTotals();
-    const customerName = selectedCustomer === "walk-in" 
-      ? "Walk-in Customer" 
-      : customers.find((c) => c.id === selectedCustomer)?.name;
-    
+    const customer = selectedCustomer === "walk-in"
+      ? null
+      : customers.find((c) => c.id === selectedCustomer);
+    const customerName = customer ? customer.name : "Walk-in Customer";
+    const customerPhone = customer?.phone || null;
+
     const receiptContent = `
       <!DOCTYPE html>
       <html>
@@ -390,6 +392,7 @@ const NewPOS = () => {
         <div class="info">
           <div><strong>Date:</strong> ${formatDateTime(new Date().toISOString())}</div>
           <div><strong>Customer:</strong> ${customerName}</div>
+          ${customerPhone ? `<div style="font-size: 11px; margin-left: 20px; color: #000;">Ph: ${customerPhone}</div>` : ''}
           <div><strong>Payment:</strong> ${paymentMethod.toUpperCase()}</div>
         </div>
         
