@@ -7,7 +7,7 @@ from motor.motor_asyncio import AsyncIOMotorClient
 import os
 import logging
 from pathlib import Path
-from pydantic import BaseModel, Field, ConfigDict, EmailStr, field_serializer
+from pydantic import BaseModel, Field, ConfigDict, EmailStr, field_serializer, field_validator
 from typing import List, Optional
 import uuid
 from datetime import datetime, timezone, timedelta
@@ -476,6 +476,28 @@ class POSSaleNew(BaseModel):
     payment_method: str
     sale_date: datetime = Field(default_factory=get_ist_now)
     created_at: datetime = Field(default_factory=get_ist_now)
+
+    @field_validator("sale_date", "created_at", mode="before")
+    @classmethod
+    def parse_datetime(cls, v):
+        """Parse string dates to datetime objects"""
+        if isinstance(v, str):
+            # Try to parse ISO format string to datetime
+            try:
+                # Handle ISO format with timezone
+                return datetime.fromisoformat(v.replace('Z', '+00:00'))
+            except ValueError:
+                # Fallback: try without timezone
+                try:
+                    dt = datetime.fromisoformat(v)
+                    # If no timezone, assume IST
+                    if dt.tzinfo is None:
+                        dt = IST.localize(dt)
+                    return dt
+                except ValueError:
+                    # If all parsing fails, return current IST time
+                    return get_ist_now()
+        return v
 
     @field_serializer("sale_date", "created_at")
     def serialize_datetime(self, dt: datetime, _info):
