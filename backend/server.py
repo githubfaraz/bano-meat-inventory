@@ -441,14 +441,21 @@ class DailyWasteTracking(BaseModel):
 
 
 class POSSaleItemNew(BaseModel):
-    derived_product_id: str
-    derived_product_name: str
-    main_category_id: str
-    main_category_name: str
-    quantity_kg: float  # Weight in kg (for weight/package) or 0 (for pieces)
+    model_config = ConfigDict(extra="ignore")
+    derived_product_id: Optional[str] = None
+    derived_product_name: Optional[str] = None
+    main_category_id: Optional[str] = None
+    main_category_name: Optional[str] = None
+    quantity_kg: Optional[float] = 0  # Weight in kg (for weight/package) or 0 (for pieces)
     quantity_pieces: Optional[int] = None  # Number of pieces (for pieces unit)
-    selling_price: float
-    total: float
+    selling_price: Optional[float] = 0
+    total: float = 0
+    # Old schema fields for backward compatibility
+    product_id: Optional[str] = None
+    product_name: Optional[str] = None
+    quantity: Optional[float] = None
+    price_per_unit: Optional[float] = None
+    unit: Optional[str] = None
 
 
 class POSSaleCreateNew(BaseModel):
@@ -3004,12 +3011,41 @@ async def get_pos_sales(
         .to_list(length=None)
     )
 
-    # Convert string dates to datetime objects
+    # Convert string dates to datetime objects and normalize old data
     for s in sales:
         if isinstance(s.get("sale_date"), str):
             s["sale_date"] = datetime.fromisoformat(s["sale_date"])
         if isinstance(s.get("created_at"), str):
             s["created_at"] = datetime.fromisoformat(s["created_at"])
+
+        # Normalize old sale items to new schema format
+        if "items" in s:
+            for item in s["items"]:
+                # If old schema fields exist but new schema fields don't, copy them over
+                if item.get("product_id") and not item.get("derived_product_id"):
+                    item["derived_product_id"] = item.get("product_id", "")
+                    item["derived_product_name"] = item.get("product_name", "Unknown")
+                    item["main_category_id"] = item.get("product_id", "")  # Fallback
+                    item["main_category_name"] = item.get("product_name", "Unknown")
+                    item["quantity_kg"] = item.get("quantity", 0)
+                    item["selling_price"] = item.get("price_per_unit", 0)
+                    # Keep old fields for backward compatibility
+
+                # Ensure required fields have defaults
+                if "total" not in item:
+                    item["total"] = 0
+                if "derived_product_id" not in item:
+                    item["derived_product_id"] = ""
+                if "derived_product_name" not in item:
+                    item["derived_product_name"] = "Unknown"
+                if "main_category_id" not in item:
+                    item["main_category_id"] = ""
+                if "main_category_name" not in item:
+                    item["main_category_name"] = "Unknown"
+                if "quantity_kg" not in item:
+                    item["quantity_kg"] = 0
+                if "selling_price" not in item:
+                    item["selling_price"] = 0
 
     return sales
 
