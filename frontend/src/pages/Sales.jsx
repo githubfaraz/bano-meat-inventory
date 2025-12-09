@@ -23,6 +23,12 @@ import { TrendingUp, Calendar, Edit, Trash2, Plus, Download } from "lucide-react
 const ITEMS_PER_PAGE = 10;
 
 const Sales = () => {
+  // Get today's date in YYYY-MM-DD format
+  const getTodayDate = () => {
+    const today = new Date();
+    return today.toISOString().split('T')[0];
+  };
+
   const [sales, setSales] = useState([]);
   const [loading, setLoading] = useState(true);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
@@ -30,8 +36,8 @@ const Sales = () => {
   const [products, setProducts] = useState([]);
   const [customers, setCustomers] = useState([]);
   const [currentPage, setCurrentPage] = useState(1);
-  const [startDate, setStartDate] = useState("");
-  const [endDate, setEndDate] = useState("");
+  const [startDate, setStartDate] = useState(getTodayDate());
+  const [endDate, setEndDate] = useState(getTodayDate());
   const [editFormData, setEditFormData] = useState({
     customer_id: "",
     customer_name: "",
