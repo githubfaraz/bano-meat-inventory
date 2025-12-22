@@ -179,7 +179,7 @@ const Purchases = () => {
                   <Input
                     id="quantity"
                     type="number"
-                    step="0.5"
+                    step="any"
                     value={formData.quantity}
                     onChange={(e) => setFormData({ ...formData, quantity: e.target.value })}
                     required
