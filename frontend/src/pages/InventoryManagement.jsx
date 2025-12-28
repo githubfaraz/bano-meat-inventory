@@ -305,7 +305,7 @@ const InventoryManagement = () => {
             <input
               type="number"
               required
-              step="0.5"
+              step="any"
               min="0.01"
               value={addPurchaseForm.raw_weight_kg}
               onChange={(e) => setAddPurchaseForm({ ...addPurchaseForm, raw_weight_kg: e.target.value })}

@@ -556,7 +556,7 @@ const PurchaseHistory = () => {
                 <input
                   type="number"
                   required
-                  step="0.5"
+                  step="any"
                   min="0.01"
                   value={addPurchaseForm.raw_weight_kg}
                   onChange={(e) => setAddPurchaseForm({ ...addPurchaseForm, raw_weight_kg: e.target.value })}
@@ -666,7 +666,7 @@ const PurchaseHistory = () => {
                 <label className="block text-sm font-medium mb-2">Raw Weight (kg) *</label>
                 <input
                   type="number"
-                  step="0.5"
+                  step="any"
                   min="0.01"
                   value={editingPurchase.raw_weight_kg}
                   onChange={(e) => setEditingPurchase({ ...editingPurchase, raw_weight_kg: parseFloat(e.target.value) })}

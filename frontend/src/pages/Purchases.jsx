@@ -191,7 +191,7 @@ const Purchases = () => {
                   <Input
                     id="cost"
                     type="number"
-                    step="0.01"
+                    step="any"
                     value={formData.cost_per_unit}
                     onChange={(e) => setFormData({ ...formData, cost_per_unit: e.target.value })}
                     required
