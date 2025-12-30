@@ -14,13 +14,6 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { toast } from "sonner";
 import { Plus, Edit, Trash2, Phone, Mail, MapPin, DollarSign, Receipt, CreditCard, CheckCircle } from "lucide-react";
 import { formatDateTime } from "@/lib/utils";
@@ -48,7 +41,7 @@ const Customers = () => {
   }, []);
 
   useEffect(() => {
-    if (selectedCustomerId) {
+    if (selectedCustomerId && selectedCustomerId !== "") {
       fetchCustomerLedger(selectedCustomerId);
     } else {
       setCustomerLedger([]);
@@ -73,11 +66,12 @@ const Customers = () => {
     try {
       const response = await axios.get(`${API}/pos-sales`);
       // Filter sales for the selected customer
-      const customerSales = response.data.filter(sale => sale.customer_id === customerId);
+      const customerSales = (response.data || []).filter(sale => sale.customer_id === customerId);
       // Sort by date descending (newest first)
-      customerSales.sort((a, b) => new Date(b.sale_date) - new Date(a.sale_date));
+      customerSales.sort((a, b) => new Date(b.sale_date || 0) - new Date(a.sale_date || 0));
       setCustomerLedger(customerSales);
     } catch (error) {
+      console.error("Failed to fetch customer ledger:", error);
       toast.error("Failed to fetch customer ledger");
       setCustomerLedger([]);
     } finally {
@@ -100,6 +94,7 @@ const Customers = () => {
       setDialogOpen(false);
       resetForm();
     } catch (error) {
+      console.error("Failed to save customer:", error);
       toast.error(error.response?.data?.detail || "Failed to save customer");
     }
   };
@@ -114,6 +109,7 @@ const Customers = () => {
       }
       fetchCustomers();
     } catch (error) {
+      console.error("Failed to delete customer:", error);
       toast.error("Failed to delete customer");
     }
   };
@@ -121,8 +117,8 @@ const Customers = () => {
   const handleEdit = (customer) => {
     setEditingCustomer(customer);
     setFormData({
-      name: customer.name,
-      phone: customer.phone,
+      name: customer.name || "",
+      phone: customer.phone || "",
       email: customer.email || "",
       address: customer.address || "",
     });
@@ -167,20 +163,22 @@ const Customers = () => {
       // Refresh customers to update total purchases
       fetchCustomers();
     } catch (error) {
+      console.error("Failed to update payment:", error);
       toast.error(error.response?.data?.detail || "Failed to update payment");
     }
   };
 
   const getSelectedCustomer = () => {
-    return customers.find(c => c.id === selectedCustomerId);
+    if (!selectedCustomerId || selectedCustomerId === "") return null;
+    return customers.find(c => c.id === selectedCustomerId) || null;
   };
 
   const calculateLedgerStats = () => {
-    const totalSales = customerLedger.reduce((sum, sale) => sum + sale.total, 0);
+    const totalSales = customerLedger.reduce((sum, sale) => sum + (sale.total || 0), 0);
     const creditSales = customerLedger.filter(sale => sale.payment_method === "credit");
-    const totalCredit = creditSales.reduce((sum, sale) => sum + sale.total, 0);
+    const totalCredit = creditSales.reduce((sum, sale) => sum + (sale.total || 0), 0);
     const paidSales = customerLedger.filter(sale => sale.payment_method !== "credit");
-    const totalPaid = paidSales.reduce((sum, sale) => sum + sale.total, 0);
+    const totalPaid = paidSales.reduce((sum, sale) => sum + (sale.total || 0), 0);
 
     return {
       totalSales,
@@ -195,7 +193,7 @@ const Customers = () => {
   }
 
   const selectedCustomer = getSelectedCustomer();
-  const ledgerStats = selectedCustomerId ? calculateLedgerStats() : null;
+  const ledgerStats = selectedCustomerId && selectedCustomerId !== "" ? calculateLedgerStats() : null;
 
   return (
     <div className="p-8" data-testid="customers-page">
@@ -282,19 +280,18 @@ const Customers = () => {
           <CardContent>
             <div className="mb-4">
               <Label>Select Customer</Label>
-              <Select value={selectedCustomerId} onValueChange={setSelectedCustomerId}>
-                <SelectTrigger className="w-full">
-                  <SelectValue placeholder="Select a customer to view ledger" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="">-- No Selection --</SelectItem>
-                  {customers.map((customer) => (
-                    <SelectItem key={customer.id} value={customer.id}>
-                      {customer.name} - {customer.phone}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <select
+                value={selectedCustomerId}
+                onChange={(e) => setSelectedCustomerId(e.target.value)}
+                className="w-full border rounded-lg px-3 py-2 mt-1"
+              >
+                <option value="">-- Select a customer to view ledger --</option>
+                {customers.map((customer) => (
+                  <option key={customer.id} value={customer.id}>
+                    {customer.name} - {customer.phone}
+                  </option>
+                ))}
+              </select>
             </div>
 
             {selectedCustomer && (
@@ -327,7 +324,7 @@ const Customers = () => {
 
             {ledgerLoading ? (
               <div className="text-center py-8">Loading ledger...</div>
-            ) : selectedCustomerId && customerLedger.length > 0 ? (
+            ) : selectedCustomerId && selectedCustomerId !== "" && customerLedger.length > 0 ? (
               <div className="border rounded-lg overflow-hidden">
                 <Table>
                   <TableHeader>
@@ -350,27 +347,27 @@ const Customers = () => {
                         </TableCell>
                         <TableCell>
                           <div className="text-sm">
-                            {sale.items.slice(0, 2).map((item, idx) => (
+                            {(sale.items || []).slice(0, 2).map((item, idx) => (
                               <div key={idx} className="text-gray-600">
                                 {item.derived_product_name} ({item.quantity_kg}kg)
                               </div>
                             ))}
-                            {sale.items.length > 2 && (
+                            {(sale.items || []).length > 2 && (
                               <div className="text-xs text-gray-500">
                                 +{sale.items.length - 2} more
                               </div>
                             )}
                           </div>
                         </TableCell>
-                        <TableCell className="text-right">₹{sale.subtotal.toFixed(2)}</TableCell>
+                        <TableCell className="text-right">₹{(sale.subtotal || 0).toFixed(2)}</TableCell>
                         <TableCell className="text-right text-red-600">
-                          {sale.discount > 0 ? `-₹${sale.discount.toFixed(2)}` : '-'}
+                          {(sale.discount || 0) > 0 ? `-₹${sale.discount.toFixed(2)}` : '-'}
                         </TableCell>
                         <TableCell className="text-right">
-                          {sale.tax > 0 ? `₹${sale.tax.toFixed(2)}` : '-'}
+                          {(sale.tax || 0) > 0 ? `₹${sale.tax.toFixed(2)}` : '-'}
                         </TableCell>
                         <TableCell className="text-right font-semibold">
-                          ₹{sale.total.toFixed(2)}
+                          ₹{(sale.total || 0).toFixed(2)}
                         </TableCell>
                         <TableCell>
                           <span className={`inline-flex items-center gap-1 px-2 py-1 rounded text-xs font-medium ${
@@ -383,7 +380,7 @@ const Customers = () => {
                             ) : (
                               <CheckCircle className="h-3 w-3" />
                             )}
-                            {sale.payment_method.toUpperCase()}
+                            {(sale.payment_method || "cash").toUpperCase()}
                           </span>
                         </TableCell>
                         <TableCell className="text-center">
@@ -403,7 +400,7 @@ const Customers = () => {
                   </TableBody>
                 </Table>
               </div>
-            ) : selectedCustomerId ? (
+            ) : selectedCustomerId && selectedCustomerId !== "" ? (
               <div className="text-center py-8 text-gray-500">
                 No purchase history found for this customer
               </div>
@@ -473,7 +470,7 @@ const Customers = () => {
                         <div className="flex items-center justify-end gap-2">
                           <DollarSign className="h-4 w-4 text-emerald-600" />
                           <span className="font-semibold text-emerald-600">
-                            ₹{customer.total_purchases?.toFixed(2) || "0.00"}
+                            ₹{(customer.total_purchases || 0).toFixed(2)}
                           </span>
                         </div>
                       </TableCell>
@@ -524,26 +521,25 @@ const Customers = () => {
                 </div>
                 <div className="flex justify-between">
                   <span className="text-sm text-gray-600">Total Amount:</span>
-                  <span className="text-sm font-semibold text-emerald-600">₹{selectedSale.total.toFixed(2)}</span>
+                  <span className="text-sm font-semibold text-emerald-600">₹{(selectedSale.total || 0).toFixed(2)}</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-sm text-gray-600">Items:</span>
-                  <span className="text-sm font-medium">{selectedSale.items.length} item(s)</span>
+                  <span className="text-sm font-medium">{(selectedSale.items || []).length} item(s)</span>
                 </div>
               </div>
             )}
             <div className="space-y-2">
               <Label>Payment Method Received</Label>
-              <Select value={paymentMethod} onValueChange={setPaymentMethod}>
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="cash">Cash</SelectItem>
-                  <SelectItem value="card">Card</SelectItem>
-                  <SelectItem value="upi">UPI</SelectItem>
-                </SelectContent>
-              </Select>
+              <select
+                value={paymentMethod}
+                onChange={(e) => setPaymentMethod(e.target.value)}
+                className="w-full border rounded-lg px-3 py-2"
+              >
+                <option value="cash">Cash</option>
+                <option value="card">Card</option>
+                <option value="upi">UPI</option>
+              </select>
             </div>
             <div className="flex gap-2 justify-end pt-4">
               <Button variant="outline" onClick={() => setPaymentDialogOpen(false)}>
