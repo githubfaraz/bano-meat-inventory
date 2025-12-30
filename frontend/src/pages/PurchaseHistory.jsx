@@ -24,6 +24,7 @@ const PurchaseHistory = () => {
   const [editingPurchase, setEditingPurchase] = useState(null);
   const [showAddPurchase, setShowAddPurchase] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState("all");
+  const [selectedVendor, setSelectedVendor] = useState("all");
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
@@ -47,7 +48,7 @@ const PurchaseHistory = () => {
     if (categories.length > 0) {
       fetchPurchases();
     }
-  }, [selectedCategory, startDate, endDate, categories]);
+  }, [selectedCategory, selectedVendor, startDate, endDate, categories]);
 
   const checkAdminStatus = () => {
     const userStr = localStorage.getItem("user");
@@ -91,9 +92,12 @@ const PurchaseHistory = () => {
       const token = localStorage.getItem("token");
       let url = `${API}/inventory-purchases`;
       const params = [];
-      
+
       if (selectedCategory !== "all") {
         params.push(`main_category_id=${selectedCategory}`);
+      }
+      if (selectedVendor !== "all") {
+        params.push(`vendor_id=${selectedVendor}`);
       }
       if (startDate) {
         params.push(`start_date=${startDate}T00:00:00`);
@@ -101,7 +105,7 @@ const PurchaseHistory = () => {
       if (endDate) {
         params.push(`end_date=${endDate}T23:59:59`);
       }
-      
+
       if (params.length > 0) {
         url += `?${params.join("&")}`;
       }
@@ -249,10 +253,12 @@ const PurchaseHistory = () => {
   const handleExport = async (format) => {
     try {
       const params = new URLSearchParams();
+      if (selectedCategory !== "all") params.append('main_category_id', selectedCategory);
+      if (selectedVendor !== "all") params.append('vendor_id', selectedVendor);
       if (startDate) params.append('start_date', `${startDate}T00:00:00`);
       if (endDate) params.append('end_date', `${endDate}T23:59:59`);
       params.append('format', format);
-      
+
       const url = `${API}/reports/purchases?${params.toString()}`;
       const response = await axios.get(url, {
         responseType: 'blob',
@@ -260,19 +266,19 @@ const PurchaseHistory = () => {
           'Authorization': `Bearer ${localStorage.getItem('token')}`
         }
       });
-      
+
       const blob = new Blob([response.data]);
       const downloadUrl = window.URL.createObjectURL(blob);
       const link = document.createElement('a');
       link.href = downloadUrl;
-      
+
       const extension = format === 'excel' ? 'xlsx' : format;
       link.download = `purchase_report.${extension}`;
       document.body.appendChild(link);
       link.click();
       link.remove();
       window.URL.revokeObjectURL(downloadUrl);
-      
+
       toast.success(`Purchase report exported as ${format.toUpperCase()}`);
     } catch (error) {
       toast.error("Failed to export report");
@@ -297,7 +303,7 @@ const PurchaseHistory = () => {
       </div>
 
       <div className="mb-6 bg-white rounded-lg shadow-md p-4">
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 mb-4">
           <div>
             <label className="block text-sm font-medium mb-2">Filter by Category</label>
             <select
@@ -309,6 +315,21 @@ const PurchaseHistory = () => {
               {categories.map((cat) => (
                 <option key={cat.id} value={cat.id}>
                   {cat.name}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div>
+            <label className="block text-sm font-medium mb-2">Filter by Vendor</label>
+            <select
+              value={selectedVendor}
+              onChange={(e) => setSelectedVendor(e.target.value)}
+              className="border rounded-lg px-4 py-2 w-full"
+            >
+              <option value="all">All Vendors</option>
+              {vendors.map((vendor) => (
+                <option key={vendor.id} value={vendor.id}>
+                  {vendor.name}
                 </option>
               ))}
             </select>
@@ -337,6 +358,7 @@ const PurchaseHistory = () => {
                 setStartDate("");
                 setEndDate("");
                 setSelectedCategory("all");
+                setSelectedVendor("all");
                 setCurrentPage(1);
               }}
               className="border border-gray-300 rounded-lg px-4 py-2 w-full hover:bg-gray-50 text-gray-700"

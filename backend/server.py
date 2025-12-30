@@ -1553,31 +1553,30 @@ async def get_inventory_report(
 async def get_purchase_report(
     start_date: Optional[str] = None,
     end_date: Optional[str] = None,
+    main_category_id: Optional[str] = None,
+    vendor_id: Optional[str] = None,
     format: str = "json",
     current_user: User = Depends(get_current_user),
 ):
-    # Fetch purchases from inventory_purchases collection (not purchases)
-    purchases = await db.inventory_purchases.find({}, {"_id": 0}).to_list(10000)
+    # Build query with filters
+    query = {}
 
-    # Filter by date if provided (using purchase_date with [:10] normalization)
+    if main_category_id:
+        query["main_category_id"] = main_category_id
+
+    if vendor_id:
+        query["vendor_id"] = vendor_id
+
     if start_date or end_date:
-        filtered_purchases = []
-        for purchase in purchases:
-            purchase_date_str = purchase.get("purchase_date", "")
-            if purchase_date_str:
-                try:
-                    purchase_date = purchase_date_str[:10]
-                    
-                    if start_date and purchase_date < start_date[:10]:
-                        continue
-                    if end_date and purchase_date > end_date[:10]:
-                        continue
-                    
-                    filtered_purchases.append(purchase)
-                except (ValueError, AttributeError):
-                    continue
-        
-        purchases = filtered_purchases
+        date_filter = {}
+        if start_date:
+            date_filter["$gte"] = start_date[:10]
+        if end_date:
+            date_filter["$lte"] = end_date[:10]
+        query["purchase_date"] = date_filter
+
+    # Fetch purchases from inventory_purchases collection with filters
+    purchases = await db.inventory_purchases.find(query, {"_id": 0}).sort("purchase_date", -1).to_list(10000)
 
     if format == "csv":
         output = BytesIO()
@@ -2100,6 +2099,7 @@ async def delete_derived_product(
 @api_router.get("/inventory-purchases", response_model=List[InventoryPurchase])
 async def get_inventory_purchases(
     main_category_id: Optional[str] = None,
+    vendor_id: Optional[str] = None,
     start_date: Optional[str] = None,
     end_date: Optional[str] = None,
     current_user: User = Depends(get_current_user),
@@ -2107,7 +2107,10 @@ async def get_inventory_purchases(
     query = {}
     if main_category_id:
         query["main_category_id"] = main_category_id
-    
+
+    if vendor_id:
+        query["vendor_id"] = vendor_id
+
     if start_date or end_date:
         date_filter = {}
         if start_date:
@@ -3056,15 +3059,36 @@ async def update_pos_sale(
     sale_data: dict,
     current_user: User = Depends(get_current_user),
 ):
-    # Check if user is admin
-    user_doc = await db.users.find_one({"id": current_user.id}, {"_id": 0})
-    if not user_doc.get("is_admin", False):
-        raise HTTPException(status_code=403, detail="Only admin can edit sales")
-
     # Get the existing sale
     existing_sale = await db.pos_sales.find_one({"id": sale_id}, {"_id": 0})
     if not existing_sale:
         raise HTTPException(status_code=404, detail="Sale not found")
+
+    # Check if only payment_method is being changed (for marking credit as paid)
+    payment_method_only = (
+        sale_data.get("payment_method") != existing_sale.get("payment_method") and
+        sale_data.get("customer_id") == existing_sale.get("customer_id") and
+        sale_data.get("items") == existing_sale.get("items") and
+        sale_data.get("total") == existing_sale.get("total") and
+        sale_data.get("subtotal") == existing_sale.get("subtotal") and
+        sale_data.get("discount") == existing_sale.get("discount") and
+        sale_data.get("tax") == existing_sale.get("tax")
+    )
+
+    # Check if user is admin (required for all edits except payment method)
+    user_doc = await db.users.find_one({"id": current_user.id}, {"_id": 0})
+    if not payment_method_only and not user_doc.get("is_admin", False):
+        raise HTTPException(status_code=403, detail="Only admin can edit sales")
+
+    # If only updating payment method, do a simple update and return
+    if payment_method_only:
+        result = await db.pos_sales.update_one(
+            {"id": sale_id},
+            {"$set": {"payment_method": sale_data.get("payment_method")}}
+        )
+        if result.matched_count == 0:
+            raise HTTPException(status_code=404, detail="Sale not found")
+        return {"message": "Payment method updated successfully", "id": sale_id}
 
     # Handle inventory adjustments for item changes
     old_items = existing_sale.get("items", [])

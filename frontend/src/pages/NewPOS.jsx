@@ -23,6 +23,7 @@ const NewPOS = () => {
   const [showCustomerDropdown, setShowCustomerDropdown] = useState(false);
   const [editingCartIndex, setEditingCartIndex] = useState(null);
   const [editPrice, setEditPrice] = useState("");
+  const [editQuantity, setEditQuantity] = useState("");
   const [saleDate, setSaleDate] = useState(new Date().toISOString().split("T")[0]);
 
   const customerDropdownRef = useRef(null);
@@ -162,32 +163,63 @@ const NewPOS = () => {
     toast.success("Item removed from cart");
   };
 
-  const handleEditPrice = (index) => {
+  const handleEditItem = (index) => {
     setEditingCartIndex(index);
     setEditPrice(cart[index].selling_price.toString());
+
+    // Set quantity based on sale unit
+    const item = cart[index];
+    if (item.sale_unit === "package") {
+      // Extract package count from display string (e.g., "3 pkg" -> 3)
+      setEditQuantity(item.quantity_display.split(" ")[0]);
+    } else {
+      // For weight-based, use quantity_kg
+      setEditQuantity(item.quantity_kg.toString());
+    }
   };
 
-  const handleSavePriceEdit = () => {
+  const handleSaveItemEdit = () => {
     if (!editPrice || parseFloat(editPrice) <= 0) {
       toast.error("Please enter a valid price");
+      return;
+    }
+
+    if (!editQuantity || parseFloat(editQuantity) <= 0) {
+      toast.error("Please enter a valid quantity");
       return;
     }
 
     const newCart = [...cart];
     const item = newCart[editingCartIndex];
     const newPrice = parseFloat(editPrice);
-    
-    const qty = item.sale_unit === "package" 
-      ? parseFloat(item.quantity_display.split(" ")[0])
-      : item.quantity_kg;
-    
+    const newQty = parseFloat(editQuantity);
+
+    // Update price
     item.selling_price = newPrice;
-    item.total = qty * newPrice;
-    
+
+    // Update quantity based on sale unit
+    if (item.sale_unit === "package") {
+      // Update both display quantity and actual kg quantity
+      item.quantity_display = `${newQty} pkg`;
+      // Recalculate kg based on package weight
+      const product = derivedProducts.find(p => p.id === item.derived_product_id);
+      if (product && product.package_weight_kg) {
+        item.quantity_kg = newQty * product.package_weight_kg;
+      }
+    } else {
+      // For weight-based, update both
+      item.quantity_kg = newQty;
+      item.quantity_display = `${newQty} kg`;
+    }
+
+    // Recalculate total
+    item.total = newQty * newPrice;
+
     setCart(newCart);
     setEditingCartIndex(null);
     setEditPrice("");
-    toast.success("Price updated successfully");
+    setEditQuantity("");
+    toast.success("Item updated successfully");
   };
 
   const calculateTotals = () => {
@@ -472,6 +504,11 @@ const NewPOS = () => {
       return;
     }
 
+    if (paymentMethod === "credit" && selectedCustomer === "walk-in") {
+      toast.error("Credit payment requires a registered customer");
+      return;
+    }
+
     setLoading(true);
     try {
       const token = localStorage.getItem("token");
@@ -631,11 +668,11 @@ const NewPOS = () => {
                           ₹{item.total.toFixed(2)}
                         </p>
                         <button
-                          onClick={() => handleEditPrice(index)}
+                          onClick={() => handleEditItem(index)}
                           className="px-2 py-1 text-xs bg-blue-500 text-white rounded hover:bg-blue-600"
-                          title="Edit Price"
+                          title="Edit Item"
                         >
-                          Edit Price
+                          Edit
                         </button>
                         <button
                           onClick={() => removeFromCart(index)}
@@ -769,6 +806,7 @@ const NewPOS = () => {
                   <option value="cash">Cash</option>
                   <option value="card">Card</option>
                   <option value="upi">UPI</option>
+                  <option value="credit">Credit</option>
                 </select>
               </div>
 
@@ -823,23 +861,42 @@ const NewPOS = () => {
         </div>
       </div>
 
-      {/* Edit Price Dialog */}
+      {/* Edit Item Dialog */}
       {editingCartIndex !== null && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
           <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
-            <h3 className="text-xl font-bold mb-4">Edit Price</h3>
+            <h3 className="text-xl font-bold mb-4">Edit Item</h3>
             <div className="space-y-4">
               <div>
                 <p className="text-sm text-gray-600 mb-2">
                   Product: <span className="font-semibold">{cart[editingCartIndex].derived_product_name}</span>
                 </p>
                 <p className="text-sm text-gray-600 mb-4">
-                  Quantity: <span className="font-semibold">{cart[editingCartIndex].quantity_display}</span>
+                  Category: <span className="font-semibold">{cart[editingCartIndex].main_category_name}</span>
                 </p>
               </div>
+
+              {/* Quantity Input */}
               <div>
                 <label className="block text-sm font-medium mb-2">
-                  New Price (₹/{cart[editingCartIndex].sale_unit === "package" ? "pkg" : "kg"}) *
+                  Quantity ({cart[editingCartIndex].sale_unit === "package" ? "packages" : "kg"}) *
+                </label>
+                <input
+                  type="number"
+                  step={cart[editingCartIndex].sale_unit === "package" ? "1" : "0.01"}
+                  min="0.01"
+                  value={editQuantity}
+                  onChange={(e) => setEditQuantity(e.target.value)}
+                  className="w-full border rounded-lg px-3 py-2"
+                  placeholder={cart[editingCartIndex].sale_unit === "package" ? "Enter packages" : "Enter kg"}
+                  autoFocus
+                />
+              </div>
+
+              {/* Price Input */}
+              <div>
+                <label className="block text-sm font-medium mb-2">
+                  Price (₹/{cart[editingCartIndex].sale_unit === "package" ? "pkg" : "kg"}) *
                 </label>
                 <input
                   type="number"
@@ -848,39 +905,38 @@ const NewPOS = () => {
                   value={editPrice}
                   onChange={(e) => setEditPrice(e.target.value)}
                   className="w-full border rounded-lg px-3 py-2"
-                  placeholder="Enter new price"
-                  autoFocus
+                  placeholder="Enter price"
                 />
               </div>
+
+              {/* Summary */}
               <div className="bg-gray-50 p-3 rounded">
                 <p className="text-sm text-gray-600">
-                  Original Price: ₹{cart[editingCartIndex].selling_price}
+                  Original: {cart[editingCartIndex].quantity_display} × ₹{cart[editingCartIndex].selling_price} = ₹{cart[editingCartIndex].total.toFixed(2)}
                 </p>
-                {editPrice && parseFloat(editPrice) > 0 && (
+                {editQuantity && editPrice && parseFloat(editQuantity) > 0 && parseFloat(editPrice) > 0 && (
                   <p className="text-sm font-semibold text-emerald-600 mt-1">
-                    New Total: ₹{(
-                      (cart[editingCartIndex].sale_unit === "package" 
-                        ? parseFloat(cart[editingCartIndex].quantity_display.split(" ")[0])
-                        : cart[editingCartIndex].quantity_kg) * parseFloat(editPrice)
-                    ).toFixed(2)}
+                    New: {parseFloat(editQuantity)} {cart[editingCartIndex].sale_unit === "package" ? "pkg" : "kg"} × ₹{parseFloat(editPrice)} = ₹{(parseFloat(editQuantity) * parseFloat(editPrice)).toFixed(2)}
                   </p>
                 )}
               </div>
+
               <div className="flex gap-2 justify-end">
                 <button
                   onClick={() => {
                     setEditingCartIndex(null);
                     setEditPrice("");
+                    setEditQuantity("");
                   }}
                   className="px-4 py-2 border rounded-lg hover:bg-gray-50"
                 >
                   Cancel
                 </button>
                 <button
-                  onClick={handleSavePriceEdit}
+                  onClick={handleSaveItemEdit}
                   className="px-4 py-2 bg-emerald-500 text-white rounded-lg hover:bg-emerald-600"
                 >
-                  Save Price
+                  Save Changes
                 </button>
               </div>
             </div>
