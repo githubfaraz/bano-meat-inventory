@@ -16,6 +16,7 @@ import {
   PieChart,
   Trash2,
   User,
+  DollarSign,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -109,6 +110,12 @@ const Layout = ({ setAuth }) => {
       path: "/daily-waste-tracking",
       icon: Trash2,
       label: "Daily Waste",
+      section: "inventory",
+    },
+    {
+      path: "/extra-expenses",
+      icon: DollarSign,
+      label: "Extra Expenses",
       section: "inventory",
     },
     {

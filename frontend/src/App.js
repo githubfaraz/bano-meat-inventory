@@ -19,6 +19,7 @@ import InventoryManagement from "@/pages/InventoryManagement";
 import PurchaseHistory from "@/pages/PurchaseHistory";
 import DailyPiecesTracking from "@/pages/DailyPiecesTracking";
 import DailyWasteTracking from "@/pages/DailyWasteTracking";
+import ExtraExpenses from "@/pages/ExtraExpenses";
 import NewPOS from "@/pages/NewPOS";
 import Layout from "@/components/Layout";
 import { Toaster } from "@/components/ui/sonner";
@@ -87,6 +88,7 @@ function App() {
             <Route path="purchase-history" element={<PurchaseHistory />} />
             <Route path="daily-pieces-tracking" element={<DailyPiecesTracking />} />
             <Route path="daily-waste-tracking" element={<DailyWasteTracking />} />
+            <Route path="extra-expenses" element={<ExtraExpenses />} />
             <Route path="new-pos" element={<NewPOS />} />
           </Route>
         </Routes>

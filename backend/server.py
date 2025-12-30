@@ -440,6 +440,32 @@ class DailyWasteTracking(BaseModel):
         return dt.isoformat()
 
 
+class ExtraExpenseCreate(BaseModel):
+    expense_date: str  # YYYY-MM-DD format
+    expense_type: str
+    description: str
+    amount: float
+    notes: Optional[str] = None
+
+
+class ExtraExpense(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    expense_date: str  # YYYY-MM-DD format
+    expense_type: str
+    description: str
+    amount: float
+    notes: Optional[str] = None
+    created_at: datetime = Field(default_factory=get_ist_now)
+
+    @field_serializer("created_at")
+    def serialize_datetime(self, dt: datetime, _info):
+        """Serialize datetime with timezone info"""
+        if dt.tzinfo is None:
+            dt = IST.localize(dt)
+        return dt.isoformat()
+
+
 class POSSaleItemNew(BaseModel):
     model_config = ConfigDict(extra="ignore")
     derived_product_id: Optional[str] = None
@@ -1874,6 +1900,190 @@ async def get_profit_loss_report(
         }
 
 
+@api_router.get("/reports/extra-expenses")
+async def get_extra_expenses_report(
+    start_date: Optional[str] = None,
+    end_date: Optional[str] = None,
+    expense_type: Optional[str] = None,
+    format: str = "json",
+    current_user: User = Depends(get_current_user),
+):
+    # Build query with filters
+    query = {}
+
+    if expense_type:
+        query["expense_type"] = expense_type
+
+    if start_date or end_date:
+        date_filter = {}
+        if start_date:
+            date_filter["$gte"] = start_date[:10]
+        if end_date:
+            date_filter["$lte"] = end_date[:10]
+        query["expense_date"] = date_filter
+
+    # Fetch expenses with filters
+    expenses = await db.extra_expenses.find(query, {"_id": 0}).sort("expense_date", -1).to_list(10000)
+
+    if format == "csv":
+        output = BytesIO()
+        writer = csv.writer(output)
+        writer.writerow(
+            [
+                "Date",
+                "Type",
+                "Description",
+                "Amount (Rs)",
+                "Notes",
+            ]
+        )
+        if not expenses:
+            writer.writerow(["No records found for the selected filters", "", "", "", ""])
+        for expense in expenses:
+            writer.writerow(
+                [
+                    expense.get("expense_date", ""),
+                    expense.get("expense_type", ""),
+                    expense.get("description", ""),
+                    expense.get("amount", 0),
+                    expense.get("notes", ""),
+                ]
+            )
+
+        # Add total row
+        if expenses:
+            total_amount = sum(e.get("amount", 0) for e in expenses)
+            writer.writerow([])
+            writer.writerow(["TOTAL", "", "", total_amount, ""])
+
+        output.seek(0)
+        return StreamingResponse(
+            output,
+            media_type="text/csv",
+            headers={"Content-Disposition": "attachment; filename=extra_expenses_report.csv"},
+        )
+
+    elif format == "excel":
+        wb = Workbook()
+        ws = wb.active
+        ws.title = "Extra Expenses"
+
+        headers = [
+            "Date",
+            "Type",
+            "Description",
+            "Amount (Rs)",
+            "Notes",
+        ]
+        ws.append(headers)
+
+        for cell in ws[1]:
+            cell.font = Font(bold=True, color="FFFFFF")
+            cell.fill = PatternFill(
+                start_color="059669", end_color="059669", fill_type="solid"
+            )
+            cell.alignment = Alignment(horizontal="center")
+
+        if not expenses:
+            ws.append(["No records found for the selected filters", "", "", "", ""])
+        else:
+            for expense in expenses:
+                ws.append(
+                    [
+                        expense.get("expense_date", ""),
+                        expense.get("expense_type", ""),
+                        expense.get("description", ""),
+                        expense.get("amount", 0),
+                        expense.get("notes", ""),
+                    ]
+                )
+
+            # Add total row
+            total_amount = sum(e.get("amount", 0) for e in expenses)
+            ws.append([])
+            total_row = ws.max_row
+            ws.append(["TOTAL", "", "", total_amount, ""])
+            for cell in ws[total_row]:
+                cell.font = Font(bold=True)
+
+        output = BytesIO()
+        wb.save(output)
+        output.seek(0)
+        return StreamingResponse(
+            output,
+            media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            headers={
+                "Content-Disposition": "attachment; filename=extra_expenses_report.xlsx"
+            },
+        )
+
+    elif format == "pdf":
+        buffer = BytesIO()
+        doc = SimpleDocTemplate(buffer, pagesize=letter)
+        elements = []
+
+        styles = getSampleStyleSheet()
+        title = Paragraph("<b>Extra Expenses Report</b>", styles["Title"])
+        elements.append(title)
+        elements.append(Spacer(1, 0.3 * inch))
+
+        if not expenses:
+            no_data_msg = Paragraph("No records found for the selected filters.", styles["Normal"])
+            elements.append(no_data_msg)
+        else:
+            data = [
+                ["Date", "Type", "Description", "Amount", "Notes"]
+            ]
+            for expense in expenses:
+                expense_date = expense.get("expense_date", "")
+                data.append(
+                    [
+                        expense_date[:10] if expense_date else "",
+                        expense.get("expense_type", "")[:12],
+                        expense.get("description", "")[:25],
+                        f"Rs {expense.get('amount', 0):.2f}",
+                        expense.get("notes", "")[:15] if expense.get("notes") else "-",
+                    ]
+                )
+
+            # Add total row
+            total_amount = sum(e.get("amount", 0) for e in expenses)
+            data.append(["", "", "TOTAL", f"Rs {total_amount:.2f}", ""])
+
+            table = Table(data)
+            table.setStyle(
+                TableStyle(
+                    [
+                        ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#059669")),
+                        ("TEXTCOLOR", (0, 0), (-1, 0), colors.whitesmoke),
+                        ("ALIGN", (0, 0), (-1, -1), "CENTER"),
+                        ("FONTNAME", (0, 0), (-1, 0), "Helvetica-Bold"),
+                        ("FONTSIZE", (0, 0), (-1, 0), 8),
+                        ("GRID", (0, 0), (-1, -1), 0.5, colors.grey),
+                        ("BACKGROUND", (0, -1), (-1, -1), colors.HexColor("#E0E0E0")),
+                        ("FONTNAME", (0, -1), (-1, -1), "Helvetica-Bold"),
+                    ]
+                )
+            )
+            elements.append(table)
+
+        doc.build(elements)
+        buffer.seek(0)
+        return StreamingResponse(
+            buffer,
+            media_type="application/pdf",
+            headers={"Content-Disposition": "attachment; filename=extra_expenses_report.pdf"},
+        )
+
+    else:
+        total_amount = sum(e.get("amount", 0) for e in expenses)
+        return {
+            "expenses": expenses,
+            "total_count": len(expenses),
+            "total_amount": total_amount,
+        }
+
+
 # ========== ROOT ==========
 
 
@@ -2876,6 +3086,122 @@ async def delete_daily_waste_tracking(
     await db.daily_waste_tracking.delete_one({"id": tracking_id})
     logger.info(f"Daily waste tracking deleted: {tracking_id}")
     return {"message": "Waste tracking deleted successfully"}
+
+
+# Extra Expenses
+@api_router.get("/extra-expenses", response_model=List[ExtraExpense])
+async def get_extra_expenses(
+    expense_type: Optional[str] = None,
+    start_date: Optional[str] = None,
+    end_date: Optional[str] = None,
+    current_user: User = Depends(get_current_user),
+):
+    query = {}
+    if expense_type:
+        query["expense_type"] = expense_type
+
+    if start_date or end_date:
+        date_filter = {}
+        if start_date:
+            date_filter["$gte"] = start_date[:10]
+        if end_date:
+            date_filter["$lte"] = end_date[:10]
+        query["expense_date"] = date_filter
+
+    expenses = (
+        await db.extra_expenses.find(query, {"_id": 0})
+        .sort("expense_date", -1)
+        .to_list(length=None)
+    )
+
+    return expenses
+
+
+@api_router.post("/extra-expenses", response_model=ExtraExpense)
+async def create_extra_expense(
+    expense: ExtraExpenseCreate, current_user: User = Depends(get_current_user)
+):
+    # Validate amount
+    if expense.amount <= 0:
+        raise HTTPException(
+            status_code=400, detail="Amount must be greater than 0"
+        )
+
+    # Create expense record
+    new_expense = ExtraExpense(
+        expense_date=expense.expense_date,
+        expense_type=expense.expense_type,
+        description=expense.description,
+        amount=round(expense.amount, 2),
+        notes=expense.notes,
+    )
+
+    await db.extra_expenses.insert_one(new_expense.dict())
+    logger.info(
+        f"Extra expense created: {expense.expense_type} - ₹{expense.amount} on {expense.expense_date}"
+    )
+    return new_expense
+
+
+@api_router.put("/extra-expenses/{expense_id}")
+async def update_extra_expense(
+    expense_id: str,
+    update_data: ExtraExpenseCreate,
+    current_user: User = Depends(get_current_user),
+):
+    # Get existing expense
+    existing_expense = await db.extra_expenses.find_one(
+        {"id": expense_id}, {"_id": 0}
+    )
+    if not existing_expense:
+        raise HTTPException(status_code=404, detail="Expense not found")
+
+    # Validate amount
+    if update_data.amount <= 0:
+        raise HTTPException(
+            status_code=400, detail="Amount must be greater than 0"
+        )
+
+    # Update expense
+    await db.extra_expenses.update_one(
+        {"id": expense_id},
+        {
+            "$set": {
+                "expense_date": update_data.expense_date,
+                "expense_type": update_data.expense_type,
+                "description": update_data.description,
+                "amount": round(update_data.amount, 2),
+                "notes": update_data.notes,
+            }
+        },
+    )
+
+    logger.info(f"Extra expense updated: {expense_id}")
+    return {"message": "Expense updated successfully", "id": expense_id}
+
+
+@api_router.delete("/extra-expenses/{expense_id}")
+async def delete_extra_expense(
+    expense_id: str, current_user: User = Depends(get_current_user)
+):
+    # Check if user is admin
+    user_doc = await db.users.find_one({"id": current_user.id}, {"_id": 0})
+    if not user_doc.get("is_admin", False):
+        raise HTTPException(
+            status_code=403, detail="Only admin can delete expenses"
+        )
+
+    # Get existing expense
+    existing_expense = await db.extra_expenses.find_one(
+        {"id": expense_id}, {"_id": 0}
+    )
+    if not existing_expense:
+        raise HTTPException(status_code=404, detail="Expense not found")
+
+    # Delete expense
+    await db.extra_expenses.delete_one({"id": expense_id})
+    logger.info(f"Extra expense deleted: {expense_id}")
+    return {"message": "Expense deleted successfully"}
 
 
 # New POS Sales
