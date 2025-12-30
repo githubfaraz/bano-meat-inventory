@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import axios from "axios";
 import { API } from "@/App";
 import { Button } from "@/components/ui/button";
@@ -15,7 +15,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { toast } from "sonner";
-import { Plus, Edit, Trash2, Phone, Mail, MapPin, DollarSign, Receipt, CreditCard, CheckCircle } from "lucide-react";
+import { Plus, Edit, Trash2, Phone, Mail, MapPin, DollarSign, Receipt, CreditCard, CheckCircle, Search, ChevronDown } from "lucide-react";
 import { formatDateTime } from "@/lib/utils";
 
 const Customers = () => {
@@ -29,12 +29,16 @@ const Customers = () => {
   const [paymentDialogOpen, setPaymentDialogOpen] = useState(false);
   const [selectedSale, setSelectedSale] = useState(null);
   const [paymentMethod, setPaymentMethod] = useState("cash");
+  const [showCustomerDropdown, setShowCustomerDropdown] = useState(false);
+  const [customerSearchTerm, setCustomerSearchTerm] = useState("");
   const [formData, setFormData] = useState({
     name: "",
     phone: "",
     email: "",
     address: "",
   });
+
+  const customerDropdownRef = useRef(null);
 
   useEffect(() => {
     fetchCustomers();
@@ -47,6 +51,24 @@ const Customers = () => {
       setCustomerLedger([]);
     }
   }, [selectedCustomerId]);
+
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (customerDropdownRef.current && !customerDropdownRef.current.contains(event.target)) {
+        setShowCustomerDropdown(false);
+        setCustomerSearchTerm("");
+      }
+    };
+
+    if (showCustomerDropdown) {
+      document.addEventListener("mousedown", handleClickOutside);
+    }
+
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, [showCustomerDropdown]);
 
   const fetchCustomers = async () => {
     try {
@@ -173,6 +195,38 @@ const Customers = () => {
     return customers.find(c => c.id === selectedCustomerId) || null;
   };
 
+  // Get sorted customers (ascending by name)
+  const getSortedCustomers = () => {
+    return [...customers].sort((a, b) => a.name.localeCompare(b.name));
+  };
+
+  // Filter customers based on search term
+  const getFilteredCustomers = () => {
+    const sortedCustomers = getSortedCustomers();
+    if (!customerSearchTerm) return sortedCustomers;
+
+    return sortedCustomers.filter((customer) =>
+      customer.name.toLowerCase().includes(customerSearchTerm.toLowerCase()) ||
+      (customer.phone && customer.phone.includes(customerSearchTerm))
+    );
+  };
+
+  // Get selected customer display name
+  const getSelectedCustomerName = () => {
+    if (!selectedCustomerId || selectedCustomerId === "") {
+      return "-- Select a customer to view ledger --";
+    }
+    const customer = customers.find(c => c.id === selectedCustomerId);
+    return customer ? `${customer.name} - ${customer.phone}` : "-- Select a customer to view ledger --";
+  };
+
+  // Handle customer selection from dropdown
+  const handleCustomerSelect = (customerId) => {
+    setSelectedCustomerId(customerId);
+    setShowCustomerDropdown(false);
+    setCustomerSearchTerm("");
+  };
+
   const calculateLedgerStats = () => {
     const totalSales = customerLedger.reduce((sum, sale) => sum + (sale.total || 0), 0);
     const creditSales = customerLedger.filter(sale => sale.payment_method === "credit");
@@ -280,18 +334,74 @@ const Customers = () => {
           <CardContent>
             <div className="mb-4">
               <Label>Select Customer</Label>
-              <select
-                value={selectedCustomerId}
-                onChange={(e) => setSelectedCustomerId(e.target.value)}
-                className="w-full border rounded-lg px-3 py-2 mt-1"
-              >
-                <option value="">-- Select a customer to view ledger --</option>
-                {customers.map((customer) => (
-                  <option key={customer.id} value={customer.id}>
-                    {customer.name} - {customer.phone}
-                  </option>
-                ))}
-              </select>
+              <div className="relative mt-1" ref={customerDropdownRef}>
+                <div
+                  onClick={() => setShowCustomerDropdown(!showCustomerDropdown)}
+                  className="w-full border rounded-lg px-3 py-2 cursor-pointer bg-white flex items-center justify-between hover:border-gray-400"
+                >
+                  <span className={selectedCustomerId ? "text-gray-900" : "text-gray-500"}>
+                    {getSelectedCustomerName()}
+                  </span>
+                  <ChevronDown className="w-4 h-4 text-gray-400" />
+                </div>
+
+                {showCustomerDropdown && (
+                  <div className="absolute z-50 w-full mt-1 bg-white border rounded-lg shadow-lg max-h-80 overflow-hidden">
+                    {/* Search Input */}
+                    <div className="p-2 border-b sticky top-0 bg-white">
+                      <div className="relative">
+                        <Search className="absolute left-3 top-2.5 h-4 w-4 text-gray-400" />
+                        <input
+                          type="text"
+                          placeholder="Search customers..."
+                          value={customerSearchTerm}
+                          onChange={(e) => setCustomerSearchTerm(e.target.value)}
+                          onClick={(e) => e.stopPropagation()}
+                          className="w-full pl-9 pr-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                          autoFocus
+                        />
+                      </div>
+                    </div>
+
+                    {/* Customer List */}
+                    <div className="max-h-60 overflow-y-auto">
+                      {/* Clear Selection Option */}
+                      <div
+                        onClick={() => handleCustomerSelect("")}
+                        className={`px-4 py-2 cursor-pointer hover:bg-gray-100 ${
+                          selectedCustomerId === "" ? "bg-emerald-50 font-semibold" : ""
+                        }`}
+                      >
+                        -- Clear Selection --
+                      </div>
+
+                      {/* Filtered Customers */}
+                      {getFilteredCustomers().length > 0 ? (
+                        getFilteredCustomers().map((customer) => (
+                          <div
+                            key={customer.id}
+                            onClick={() => handleCustomerSelect(customer.id)}
+                            className={`px-4 py-2 cursor-pointer hover:bg-emerald-50 ${
+                              selectedCustomerId === customer.id ? "bg-emerald-100 font-semibold" : ""
+                            }`}
+                          >
+                            <div className="flex justify-between items-center">
+                              <span>{customer.name}</span>
+                              {customer.phone && (
+                                <span className="text-sm text-gray-500">{customer.phone}</span>
+                              )}
+                            </div>
+                          </div>
+                        ))
+                      ) : (
+                        <div className="px-4 py-3 text-gray-500 text-center">
+                          No customers found
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
+              </div>
             </div>
 
             {selectedCustomer && (
@@ -467,12 +577,9 @@ const Customers = () => {
                         )}
                       </TableCell>
                       <TableCell className="text-right">
-                        <div className="flex items-center justify-end gap-2">
-                          <DollarSign className="h-4 w-4 text-emerald-600" />
-                          <span className="font-semibold text-emerald-600">
-                            ₹{(customer.total_purchases || 0).toFixed(2)}
-                          </span>
-                        </div>
+                        <span className="font-semibold text-emerald-600">
+                          ₹{(customer.total_purchases || 0).toFixed(2)}
+                        </span>
                       </TableCell>
                       <TableCell className="text-center">
                         <div className="flex gap-2 justify-center">
