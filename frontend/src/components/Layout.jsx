@@ -17,7 +17,6 @@ import {
   Trash2,
   User,
   DollarSign,
-  TrendingUp,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
