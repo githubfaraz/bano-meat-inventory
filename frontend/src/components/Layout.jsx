@@ -17,6 +17,7 @@ import {
   Trash2,
   User,
   DollarSign,
+  TrendingUp,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -116,6 +117,12 @@ const Layout = ({ setAuth }) => {
       path: "/extra-expenses",
       icon: DollarSign,
       label: "Extra Expenses",
+      section: "inventory",
+    },
+    {
+      path: "/profit-loss",
+      icon: TrendingUp,
+      label: "Profit & Loss",
       section: "inventory",
     },
     {

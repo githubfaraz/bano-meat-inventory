@@ -88,7 +88,7 @@ Bano Fresh Meat Inventory Management System is a specialized application for man
 
 ### Database
 - **Type:** MongoDB (NoSQL Document Database)
-- **Collections:** 13 main collections
+- **Collections:** 14 main collections
 - **Hosting:** MongoDB Atlas (Cloud) for production
 - **Local:** MongoDB Community for development
 
@@ -176,7 +176,7 @@ bano-meat-inventory/
 
 ### Overview
 - **Database Name:** `bano_fresh`
-- **Total Collections:** 13
+- **Total Collections:** 14
 - **Database Type:** MongoDB (NoSQL)
 - **Connection:** MongoDB Atlas (Cloud)
 
@@ -357,7 +357,45 @@ bano-meat-inventory/
 
 ---
 
-#### 4.8 vendors
+#### 4.8 extra_expenses
+**Purpose:** Daily operational expenses tracking (tea, petrol, staff food, etc.)
+
+```javascript
+{
+  id: "uuid-string",
+  expense_date: "2025-01-01",             // Date (YYYY-MM-DD)
+  expense_type: "Tea",                    // Type of expense
+  description: "Morning tea for staff",   // Expense description
+  amount: 150.00,                         // Amount in Rs
+  notes: "5 cups @ Rs 30 each",          // Optional notes
+  created_at: "2025-01-01T10:00:00+05:30"
+}
+```
+
+**Predefined Expense Types:**
+- Tea
+- Coffee
+- Staff Food
+- Petrol
+- Transport
+- Electricity
+- Water
+- Gas
+- Maintenance
+- Cleaning
+- Stationery
+- Repairs
+- Miscellaneous
+
+**Key Features:**
+- Filter by expense type and date range
+- Export to CSV/Excel/PDF with totals
+- Delete requires admin privileges
+- All users can add/edit expenses
+
+---
+
+#### 4.9 vendors
 **Purpose:** Vendor/supplier management
 
 ```javascript
@@ -374,7 +412,7 @@ bano-meat-inventory/
 
 ---
 
-#### 4.9 customers
+#### 4.10 customers
 **Purpose:** Customer database
 
 ```javascript
@@ -394,7 +432,7 @@ bano-meat-inventory/
 
 ---
 
-#### 4.10 products (Legacy)
+#### 4.11 products (Legacy)
 **Purpose:** Legacy product system (backward compatibility)
 
 ```javascript
@@ -420,14 +458,14 @@ bano-meat-inventory/
 
 ---
 
-#### 4.11 sales (Legacy)
+#### 4.12 sales (Legacy)
 **Purpose:** Legacy sales system
 
 **Status:** Maintained for backward compatibility. New sales use `pos_sales`.
 
 ---
 
-#### 4.12 purchases (Legacy)
+#### 4.13 purchases (Legacy)
 **Purpose:** Legacy purchase system
 
 **Status:** Maintained for backward compatibility. New purchases use `inventory_purchases`.
@@ -470,7 +508,7 @@ customers
 ## 5. API ENDPOINTS
 
 **Base URL:** `http://localhost:8001/api`
-**Total Endpoints:** 53
+**Total Endpoints:** 58
 
 ### Authentication Endpoints (2)
 
@@ -630,6 +668,46 @@ customers
 
 ---
 
+### Extra Expenses (4)
+
+| Method | Endpoint | Description | Admin Only |
+|--------|----------|-------------|------------|
+| GET | `/extra-expenses` | List expenses | No |
+| POST | `/extra-expenses` | Create expense | No |
+| PUT | `/extra-expenses/{id}` | Update expense | No |
+| DELETE | `/extra-expenses/{id}` | Delete expense | Yes |
+
+**Query Parameters (GET):**
+- `expense_type` (optional): Filter by type (Tea, Coffee, etc.)
+- `start_date` (optional): Filter from date (YYYY-MM-DD)
+- `end_date` (optional): Filter to date (YYYY-MM-DD)
+
+**Create Expense Request:**
+```json
+{
+  "expense_date": "2025-01-01",
+  "expense_type": "Tea",
+  "description": "Morning tea for staff",
+  "amount": 150.00,
+  "notes": "5 cups @ Rs 30 each"
+}
+```
+
+**Response:**
+```json
+{
+  "id": "uuid",
+  "expense_date": "2025-01-01",
+  "expense_type": "Tea",
+  "description": "Morning tea for staff",
+  "amount": 150.00,
+  "notes": "5 cups @ Rs 30 each",
+  "created_at": "2025-01-01T10:00:00+05:30"
+}
+```
+
+---
+
 ### Vendors (4)
 
 | Method | Endpoint | Description | Admin Only |
@@ -652,7 +730,7 @@ customers
 
 ---
 
-### Reports (4)
+### Reports (5)
 
 | Method | Endpoint | Description | Admin Only |
 |--------|----------|-------------|------------|
@@ -660,12 +738,14 @@ customers
 | GET | `/reports/inventory` | Inventory report | No |
 | GET | `/reports/purchases` | Purchase report | No |
 | GET | `/reports/profit-loss` | Profit & Loss report | No |
+| GET | `/reports/extra-expenses` | Extra Expenses report | No |
 
 **Query Parameters (All Reports):**
-- `start_date` (required): From date (YYYY-MM-DD)
-- `end_date` (required): To date (YYYY-MM-DD)
+- `start_date` (optional): From date (YYYY-MM-DD)
+- `end_date` (optional): To date (YYYY-MM-DD)
 - `format` (optional): `json` | `csv` | `excel` | `pdf` (default: json)
-- `main_category_id` (optional): Filter by category
+- `main_category_id` (optional): Filter by category (not applicable for extra-expenses)
+- `expense_type` (optional): Filter by expense type (only for extra-expenses)
 
 **Response Formats:**
 - **JSON:** Returns data as JSON
@@ -805,6 +885,23 @@ Deduction:
 - 2 kg chicken spoiled due to power outage
 - Staff enters waste with reason
 - System deducts 2 kg from inventory
+
+#### Extra Expenses Tracking
+- Record daily operational expenses
+- 13 predefined expense types (Tea, Coffee, Staff Food, Petrol, Transport, Electricity, Water, Gas, Maintenance, Cleaning, Stationery, Repairs, Miscellaneous)
+- Date-wise expense tracking
+- Amount and description recording
+- Optional notes for details
+- Filter by expense type and date range
+- Export to CSV/Excel/PDF with totals
+- Admin-only deletion
+
+**Use Case:**
+- Staff purchases tea for Rs 150
+- Enter expense: Type=Tea, Description="Morning tea for staff", Amount=150
+- Can add notes: "5 cups @ Rs 30 each"
+- View all tea expenses for the month
+- Export monthly expense report
 
 ---
 
@@ -1115,6 +1212,7 @@ Purchase 3 (Jan 3): remaining: 60 kg (untouched)
 │  - /api/inventory-purchases/*               │
 │  - /api/pos-sales/*                         │
 │  - /api/daily-*-tracking/*                  │
+│  - /api/extra-expenses/*                    │
 │  - /api/vendors/*                           │
 │  - /api/customers/*                         │
 │  - /api/reports/*                           │
@@ -1142,7 +1240,7 @@ Purchase 3 (Jan 3): remaining: 60 kg (untouched)
 ┌─────────────────────────────────────────────┐
 │        Database                             │
 │        (MongoDB Atlas)                      │
-│  - 13 Collections                           │
+│  - 14 Collections                           │
 │  - Indexes                                  │
 └─────────────────────────────────────────────┘
 ```
@@ -1173,7 +1271,7 @@ async def create_category(
     ...
 ```
 
-**Pydantic Models (30 models):**
+**Pydantic Models (32 models):**
 - Request models: `*Create`, `*Update`
 - Response models: Full entities
 - Internal models: `DashboardStats`, `InventorySummary`, `POSSaleItem`
@@ -1229,6 +1327,7 @@ App.js (BrowserRouter)
       │  ├─ Sales
       │  ├─ Daily Pieces Tracking
       │  ├─ Daily Waste Tracking
+      │  ├─ Extra Expenses
       │  ├─ Vendors
       │  ├─ Customers
       │  ├─ Reports
@@ -1247,6 +1346,7 @@ App.js (BrowserRouter)
          ├─ Sales.jsx
          ├─ DailyPiecesTracking.jsx
          ├─ DailyWasteTracking.jsx
+         ├─ ExtraExpenses.jsx
          ├─ Vendors.jsx
          ├─ Customers.jsx
          ├─ Reports.jsx
@@ -2086,11 +2186,11 @@ GET /api/inventory-purchases?main_category_id=<id>
 |--------|-------|
 | Total Lines of Code | 12,000+ |
 | Backend (server.py) | 3,267 lines |
-| Frontend Pages | 19 pages, 8,110 lines |
+| Frontend Pages | 20 pages, 8,584 lines |
 | UI Components | 47 Shadcn components |
-| API Endpoints | 53 endpoints |
-| Database Collections | 13 collections |
-| Pydantic Models | 30 models |
+| API Endpoints | 58 endpoints |
+| Database Collections | 14 collections |
+| Pydantic Models | 32 models |
 | Dependencies (Backend) | 77 packages |
 | Dependencies (Frontend) | 50+ packages |
 
@@ -2113,8 +2213,8 @@ ab5ee86 - bug fixed
 This document provides a comprehensive reference for the Bano Fresh Meat Inventory Management System. It covers:
 
 - Complete technology stack and architecture
-- Database schema with 13 collections
-- 53 API endpoints with examples
+- Database schema with 14 collections
+- 58 API endpoints with examples
 - Business logic and workflows (FIFO, POS, tracking)
 - Component architecture (backend & frontend)
 - Security and authentication

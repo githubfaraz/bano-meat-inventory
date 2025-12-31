@@ -1900,6 +1900,133 @@ async def get_profit_loss_report(
         }
 
 
+@api_router.get("/reports/daily-profit-loss")
+async def get_daily_profit_loss(
+    start_date: Optional[str] = None,
+    end_date: Optional[str] = None,
+    current_user: User = Depends(get_current_user),
+):
+    """
+    Get daily profit and loss breakdown including:
+    - POS Sales revenue
+    - Inventory purchase costs
+    - Extra expenses
+    - Daily net profit/loss
+    """
+    from collections import defaultdict
+
+    # Build date query
+    date_query = {}
+    if start_date or end_date:
+        date_filter = {}
+        if start_date:
+            date_filter["$gte"] = start_date[:10]
+        if end_date:
+            date_filter["$lte"] = end_date[:10]
+        date_query = date_filter
+
+    # Fetch POS sales
+    sales_query = {}
+    if date_query:
+        sales_query["sale_date"] = {"$gte": start_date, "$lte": end_date} if start_date and end_date else {}
+    pos_sales = await db.pos_sales.find({}, {"_id": 0}).to_list(10000)
+
+    # Fetch inventory purchases
+    purchase_query = {}
+    if date_query:
+        purchase_query["purchase_date"] = date_query
+    inventory_purchases = await db.inventory_purchases.find(purchase_query, {"_id": 0}).to_list(10000)
+
+    # Fetch extra expenses
+    expense_query = {}
+    if date_query:
+        expense_query["expense_date"] = date_query
+    extra_expenses = await db.extra_expenses.find(expense_query, {"_id": 0}).to_list(10000)
+
+    # Group by date
+    daily_data = defaultdict(lambda: {
+        "date": "",
+        "revenue": 0,
+        "purchase_cost": 0,
+        "expenses": 0,
+        "gross_profit": 0,
+        "net_profit": 0,
+        "sales_count": 0,
+        "purchase_count": 0,
+        "expense_count": 0
+    })
+
+    # Process POS sales
+    for sale in pos_sales:
+        sale_date_str = sale.get("sale_date", "")
+        if isinstance(sale_date_str, str) and len(sale_date_str) >= 10:
+            date_key = sale_date_str[:10]
+
+            # Apply date filter if specified
+            if date_query:
+                if start_date and date_key < start_date[:10]:
+                    continue
+                if end_date and date_key > end_date[:10]:
+                    continue
+
+            daily_data[date_key]["date"] = date_key
+            daily_data[date_key]["revenue"] += sale.get("total", 0)
+            daily_data[date_key]["sales_count"] += 1
+
+    # Process inventory purchases
+    for purchase in inventory_purchases:
+        purchase_date_str = purchase.get("purchase_date", "")
+        if isinstance(purchase_date_str, str) and len(purchase_date_str) >= 10:
+            date_key = purchase_date_str[:10]
+            daily_data[date_key]["date"] = date_key
+            daily_data[date_key]["purchase_cost"] += purchase.get("total_cost", 0)
+            daily_data[date_key]["purchase_count"] += 1
+
+    # Process extra expenses
+    for expense in extra_expenses:
+        expense_date = expense.get("expense_date", "")
+        if expense_date:
+            daily_data[expense_date]["date"] = expense_date
+            daily_data[expense_date]["expenses"] += expense.get("amount", 0)
+            daily_data[expense_date]["expense_count"] += 1
+
+    # Calculate profits
+    for date_key in daily_data:
+        data = daily_data[date_key]
+        data["gross_profit"] = data["revenue"] - data["purchase_cost"]
+        data["net_profit"] = data["gross_profit"] - data["expenses"]
+
+    # Convert to list and sort by date (most recent first)
+    daily_list = sorted(daily_data.values(), key=lambda x: x["date"], reverse=True)
+
+    # Calculate totals
+    total_revenue = sum(d["revenue"] for d in daily_list)
+    total_purchase_cost = sum(d["purchase_cost"] for d in daily_list)
+    total_expenses = sum(d["expenses"] for d in daily_list)
+    total_gross_profit = total_revenue - total_purchase_cost
+    total_net_profit = total_gross_profit - total_expenses
+    profit_margin = (total_net_profit / total_revenue * 100) if total_revenue > 0 else 0
+
+    return {
+        "daily_breakdown": daily_list,
+        "summary": {
+            "total_revenue": round(total_revenue, 2),
+            "total_purchase_cost": round(total_purchase_cost, 2),
+            "total_expenses": round(total_expenses, 2),
+            "total_gross_profit": round(total_gross_profit, 2),
+            "total_net_profit": round(total_net_profit, 2),
+            "profit_margin": round(profit_margin, 2),
+            "total_sales_count": sum(d["sales_count"] for d in daily_list),
+            "total_purchase_count": sum(d["purchase_count"] for d in daily_list),
+            "total_expense_count": sum(d["expense_count"] for d in daily_list),
+            "date_range": {
+                "start_date": start_date[:10] if start_date else None,
+                "end_date": end_date[:10] if end_date else None
+            }
+        }
+    }
+
+
 @api_router.get("/reports/extra-expenses")
 async def get_extra_expenses_report(
     start_date: Optional[str] = None,
