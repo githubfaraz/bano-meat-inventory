@@ -23,24 +23,25 @@ const ProfitLoss = () => {
   const [endDate, setEndDate] = useState("");
 
   useEffect(() => {
-    // Set default date range (current month)
+    // Set default date range (current month) and fetch initial data
     const today = new Date();
     const firstDay = new Date(today.getFullYear(), today.getMonth(), 1);
-    setStartDate(firstDay.toISOString().split("T")[0]);
-    setEndDate(today.toISOString().split("T")[0]);
+    const startDateStr = firstDay.toISOString().split("T")[0];
+    const endDateStr = today.toISOString().split("T")[0];
+    setStartDate(startDateStr);
+    setEndDate(endDateStr);
+
+    // Fetch initial data after setting dates
+    setTimeout(() => {
+      fetchProfitLossWithDates(startDateStr, endDateStr);
+    }, 100);
   }, []);
 
-  useEffect(() => {
-    if (startDate && endDate) {
-      fetchProfitLoss();
-    }
-  }, [startDate, endDate]);
-
-  const fetchProfitLoss = async () => {
+  const fetchProfitLossWithDates = async (start, end) => {
     try {
       setLoading(true);
       const token = localStorage.getItem("token");
-      const url = `${API}/reports/daily-profit-loss?start_date=${startDate}&end_date=${endDate}`;
+      const url = `${API}/reports/daily-profit-loss?start_date=${start}&end_date=${end}`;
 
       const response = await axios.get(url, {
         headers: { Authorization: `Bearer ${token}` },
@@ -54,6 +55,59 @@ const ProfitLoss = () => {
     } finally {
       setLoading(false);
     }
+  };
+
+  const fetchProfitLoss = () => {
+    if (!startDate || !endDate) {
+      toast.error("Please select both start and end dates");
+      return;
+    }
+
+    if (startDate > endDate) {
+      toast.error("Start date cannot be after end date");
+      return;
+    }
+
+    fetchProfitLossWithDates(startDate, endDate);
+  };
+
+  const setQuickDateRange = (range) => {
+    const today = new Date();
+    let start, end;
+
+    switch (range) {
+      case 'today':
+        start = end = today.toISOString().split("T")[0];
+        break;
+      case 'yesterday':
+        const yesterday = new Date(today);
+        yesterday.setDate(yesterday.getDate() - 1);
+        start = end = yesterday.toISOString().split("T")[0];
+        break;
+      case 'this_week':
+        const weekStart = new Date(today);
+        weekStart.setDate(today.getDate() - today.getDay());
+        start = weekStart.toISOString().split("T")[0];
+        end = today.toISOString().split("T")[0];
+        break;
+      case 'this_month':
+        start = new Date(today.getFullYear(), today.getMonth(), 1).toISOString().split("T")[0];
+        end = today.toISOString().split("T")[0];
+        break;
+      case 'last_month':
+        const lastMonthStart = new Date(today.getFullYear(), today.getMonth() - 1, 1);
+        const lastMonthEnd = new Date(today.getFullYear(), today.getMonth(), 0);
+        start = lastMonthStart.toISOString().split("T")[0];
+        end = lastMonthEnd.toISOString().split("T")[0];
+        break;
+      default:
+        return;
+    }
+
+    setStartDate(start);
+    setEndDate(end);
+    // Auto-fetch when using quick range
+    fetchProfitLossWithDates(start, end);
   };
 
   const exportToCSV = () => {
@@ -93,12 +147,13 @@ const ProfitLoss = () => {
     toast.success("Exported to CSV");
   };
 
-  if (loading) {
-    return <div className="p-8">Loading profit & loss data...</div>;
-  }
-
   const summary = data?.summary || {};
   const dailyBreakdown = data?.daily_breakdown || [];
+
+  // Show initial loading only on first load
+  if (loading && !data) {
+    return <div className="p-8">Loading profit & loss data...</div>;
+  }
 
   return (
     <div className="p-8" data-testid="profit-loss-page">
@@ -111,16 +166,28 @@ const ProfitLoss = () => {
         </p>
       </div>
 
+      {/* Loading Overlay */}
+      {loading && data && (
+        <div className="fixed inset-0 bg-black bg-opacity-20 z-50 flex items-center justify-center">
+          <div className="bg-white rounded-lg shadow-lg p-6 flex items-center gap-3">
+            <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-emerald-600"></div>
+            <span className="text-gray-700 font-medium">Loading data...</span>
+          </div>
+        </div>
+      )}
+
       {/* Date Range Filter */}
       <Card className="mb-6">
         <CardContent className="pt-6">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-4">
             <div>
               <label className="block text-sm font-medium mb-2">Start Date</label>
               <Input
                 type="date"
                 value={startDate}
                 onChange={(e) => setStartDate(e.target.value)}
+                onKeyPress={(e) => e.key === 'Enter' && fetchProfitLoss()}
+                max={new Date().toISOString().split("T")[0]}
               />
             </div>
             <div>
@@ -129,8 +196,18 @@ const ProfitLoss = () => {
                 type="date"
                 value={endDate}
                 onChange={(e) => setEndDate(e.target.value)}
+                onKeyPress={(e) => e.key === 'Enter' && fetchProfitLoss()}
                 max={new Date().toISOString().split("T")[0]}
               />
+            </div>
+            <div className="flex items-end">
+              <Button
+                onClick={fetchProfitLoss}
+                className="w-full bg-emerald-600 hover:bg-emerald-700"
+                disabled={loading}
+              >
+                {loading ? "Loading..." : "Apply Filter"}
+              </Button>
             </div>
             <div className="flex items-end">
               <Button
@@ -140,6 +217,51 @@ const ProfitLoss = () => {
                 disabled={!data || dailyBreakdown.length === 0}
               >
                 Export to CSV
+              </Button>
+            </div>
+          </div>
+          <div className="pt-4 border-t">
+            <p className="text-xs font-medium text-gray-600 mb-2">Quick Date Ranges:</p>
+            <div className="flex flex-wrap gap-2">
+              <Button
+                onClick={() => setQuickDateRange('today')}
+                variant="outline"
+                size="sm"
+                disabled={loading}
+              >
+                Today
+              </Button>
+              <Button
+                onClick={() => setQuickDateRange('yesterday')}
+                variant="outline"
+                size="sm"
+                disabled={loading}
+              >
+                Yesterday
+              </Button>
+              <Button
+                onClick={() => setQuickDateRange('this_week')}
+                variant="outline"
+                size="sm"
+                disabled={loading}
+              >
+                This Week
+              </Button>
+              <Button
+                onClick={() => setQuickDateRange('this_month')}
+                variant="outline"
+                size="sm"
+                disabled={loading}
+              >
+                This Month
+              </Button>
+              <Button
+                onClick={() => setQuickDateRange('last_month')}
+                variant="outline"
+                size="sm"
+                disabled={loading}
+              >
+                Last Month
               </Button>
             </div>
           </div>
