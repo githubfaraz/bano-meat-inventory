@@ -1974,9 +1974,20 @@ async def get_daily_profit_loss(
     pos_sales = await db.pos_sales.find({}, {"_id": 0}).to_list(10000)
 
     # Fetch inventory purchases
+    # Note: purchase_date is stored as datetime object, not string
     purchase_query = {}
     if date_query:
-        purchase_query["purchase_date"] = date_query
+        # Convert string dates to datetime objects for comparison
+        datetime_filter = {}
+        if start_date:
+            # Start of day in IST
+            datetime_filter["$gte"] = IST.localize(datetime.strptime(start_date[:10], "%Y-%m-%d"))
+        if end_date:
+            # End of day in IST (23:59:59)
+            end_dt = IST.localize(datetime.strptime(end_date[:10], "%Y-%m-%d"))
+            end_dt = end_dt.replace(hour=23, minute=59, second=59)
+            datetime_filter["$lte"] = end_dt
+        purchase_query["purchase_date"] = datetime_filter
     inventory_purchases = await db.inventory_purchases.find(purchase_query, {"_id": 0}).to_list(10000)
 
     # Fetch extra expenses
@@ -2017,20 +2028,26 @@ async def get_daily_profit_loss(
 
     # Process inventory purchases
     for purchase in inventory_purchases:
-        purchase_date_str = purchase.get("purchase_date", "")
-        if isinstance(purchase_date_str, str) and len(purchase_date_str) >= 10:
-            date_key = purchase_date_str[:10]
+        purchase_date = purchase.get("purchase_date", "")
 
-            # Apply date filter if specified
-            if date_query:
-                if start_date and date_key < start_date[:10]:
-                    continue
-                if end_date and date_key > end_date[:10]:
-                    continue
+        # Handle both datetime objects and strings (for backward compatibility)
+        if isinstance(purchase_date, datetime):
+            date_key = purchase_date.strftime("%Y-%m-%d")
+        elif isinstance(purchase_date, str) and len(purchase_date) >= 10:
+            date_key = purchase_date[:10]
+        else:
+            continue
 
-            daily_data[date_key]["date"] = date_key
-            daily_data[date_key]["purchase_cost"] += purchase.get("total_cost", 0)
-            daily_data[date_key]["purchase_count"] += 1
+        # Apply date filter if specified (already filtered by MongoDB, but double-check)
+        if date_query:
+            if start_date and date_key < start_date[:10]:
+                continue
+            if end_date and date_key > end_date[:10]:
+                continue
+
+        daily_data[date_key]["date"] = date_key
+        daily_data[date_key]["purchase_cost"] += purchase.get("total_cost", 0)
+        daily_data[date_key]["purchase_count"] += 1
 
     # Process extra expenses
     for expense in extra_expenses:
