@@ -17,6 +17,7 @@ import {
   Trash2,
   User,
   DollarSign,
+  Settings,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -117,6 +118,13 @@ const Layout = ({ setAuth }) => {
       icon: DollarSign,
       label: "Extra Expenses",
       section: "inventory",
+    },
+    {
+      path: "/expense-types",
+      icon: Settings,
+      label: "Expense Types",
+      section: "inventory",
+      adminOnly: true,
     },
     {
       path: "/profit-loss",

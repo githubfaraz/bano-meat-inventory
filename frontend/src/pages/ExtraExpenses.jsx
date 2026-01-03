@@ -18,24 +18,9 @@ import { toast } from "sonner";
 import { Plus, Edit, Trash2, DollarSign, Calendar, Download } from "lucide-react";
 import { formatDate } from "@/lib/utils";
 
-const EXPENSE_TYPES = [
-  "Tea",
-  "Coffee",
-  "Staff Food",
-  "Petrol",
-  "Transport",
-  "Electricity",
-  "Water",
-  "Gas",
-  "Maintenance",
-  "Cleaning",
-  "Stationery",
-  "Repairs",
-  "Miscellaneous"
-];
-
 const ExtraExpenses = () => {
   const [expenses, setExpenses] = useState([]);
+  const [expenseTypes, setExpenseTypes] = useState([]);
   const [loading, setLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingExpense, setEditingExpense] = useState(null);
@@ -53,6 +38,7 @@ const ExtraExpenses = () => {
 
   useEffect(() => {
     checkAdminStatus();
+    fetchExpenseTypes();
     fetchExpenses();
   }, []);
 
@@ -70,6 +56,20 @@ const ExtraExpenses = () => {
         console.error("Error parsing user:", error);
         setIsAdmin(false);
       }
+    }
+  };
+
+  const fetchExpenseTypes = async () => {
+    try {
+      const token = localStorage.getItem("token");
+      const response = await axios.get(`${API}/expense-types`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      setExpenseTypes(response.data.map((t) => t.name) || []);
+    } catch (error) {
+      console.error("Failed to fetch expense types:", error);
+      toast.error("Failed to load expense types");
+      setExpenseTypes([]);
     }
   };
 
@@ -271,7 +271,7 @@ const ExtraExpenses = () => {
                   required
                 >
                   <option value="">Select Type</option>
-                  {EXPENSE_TYPES.map((type) => (
+                  {expenseTypes.map((type) => (
                     <option key={type} value={type}>
                       {type}
                     </option>
@@ -335,7 +335,7 @@ const ExtraExpenses = () => {
               className="border rounded-lg px-4 py-2 w-full"
             >
               <option value="all">All Types</option>
-              {EXPENSE_TYPES.map((type) => (
+              {expenseTypes.map((type) => (
                 <option key={type} value={type}>
                   {type}
                 </option>

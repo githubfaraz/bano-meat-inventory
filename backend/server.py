@@ -286,8 +286,38 @@ async def create_admin_user():
             logger.info("✅ Admin user created: admin-bano")
         else:
             logger.info("✅ Admin user already exists")
+
+        # Seed default expense types
+        default_expense_types = [
+            "Tea",
+            "Coffee",
+            "Staff Food",
+            "Petrol",
+            "Transport",
+            "Electricity",
+            "Water",
+            "Gas",
+            "Maintenance",
+            "Cleaning",
+            "Stationery",
+            "Repairs",
+            "Miscellaneous"
+        ]
+
+        seeded_count = 0
+        for type_name in default_expense_types:
+            existing = await db.expense_types.find_one({"name": type_name}, {"_id": 0})
+            if not existing:
+                new_type = ExpenseType(name=type_name)
+                await db.expense_types.insert_one(new_type.dict())
+                seeded_count += 1
+
+        if seeded_count > 0:
+            logger.info(f"✅ Seeded {seeded_count} default expense types")
+        else:
+            logger.info("✅ Default expense types already exist")
     except Exception as e:
-        logger.error(f"Error creating admin user: {e}")
+        logger.error(f"Error during startup: {e}")
 
 
 @api_router.post("/auth/login", response_model=TokenResponse)
@@ -332,6 +362,18 @@ class MainCategory(BaseModel):
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))
     name: str
     description: Optional[str] = None
+    created_at: datetime = Field(default_factory=get_ist_now)
+    updated_at: datetime = Field(default_factory=get_ist_now)
+
+
+class ExpenseTypeCreate(BaseModel):
+    name: str
+
+
+class ExpenseType(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    name: str
     created_at: datetime = Field(default_factory=get_ist_now)
     updated_at: datetime = Field(default_factory=get_ist_now)
 
@@ -2300,6 +2342,97 @@ async def delete_main_category(
         raise HTTPException(status_code=404, detail="Category not found")
 
     return {"message": "Category deleted successfully"}
+
+
+# Expense Types Management
+@api_router.get("/expense-types", response_model=List[ExpenseType])
+async def get_expense_types(current_user: User = Depends(get_current_user)):
+    types = await db.expense_types.find({}, {"_id": 0}).to_list(length=None)
+    return types
+
+
+@api_router.post("/expense-types", response_model=ExpenseType)
+async def create_expense_type(
+    expense_type: ExpenseTypeCreate, current_user: User = Depends(get_current_user)
+):
+    # Check if user is admin
+    user_doc = await db.users.find_one({"id": current_user.id}, {"_id": 0})
+    if not user_doc.get("is_admin", False):
+        raise HTTPException(
+            status_code=403, detail="Only admin can create expense types"
+        )
+
+    # Check if expense type already exists
+    existing = await db.expense_types.find_one(
+        {"name": expense_type.name}, {"_id": 0}
+    )
+    if existing:
+        raise HTTPException(
+            status_code=400, detail="Expense type with this name already exists"
+        )
+
+    new_type = ExpenseType(**expense_type.dict())
+    await db.expense_types.insert_one(new_type.dict())
+    logger.info(f"Expense type created: {new_type.name}")
+    return new_type
+
+
+@api_router.put("/expense-types/{type_id}", response_model=ExpenseType)
+async def update_expense_type(
+    type_id: str,
+    expense_type: ExpenseTypeCreate,
+    current_user: User = Depends(get_current_user),
+):
+    # Check if user is admin
+    user_doc = await db.users.find_one({"id": current_user.id}, {"_id": 0})
+    if not user_doc.get("is_admin", False):
+        raise HTTPException(
+            status_code=403, detail="Only admin can update expense types"
+        )
+
+    existing = await db.expense_types.find_one({"id": type_id}, {"_id": 0})
+    if not existing:
+        raise HTTPException(status_code=404, detail="Expense type not found")
+
+    update_data = expense_type.dict()
+    update_data["updated_at"] = get_ist_now()
+
+    await db.expense_types.update_one({"id": type_id}, {"$set": update_data})
+
+    updated = await db.expense_types.find_one({"id": type_id}, {"_id": 0})
+    return ExpenseType(**updated)
+
+
+@api_router.delete("/expense-types/{type_id}")
+async def delete_expense_type(
+    type_id: str, current_user: User = Depends(get_current_user)
+):
+    # Check if user is admin
+    user_doc = await db.users.find_one({"id": current_user.id}, {"_id": 0})
+    if not user_doc.get("is_admin", False):
+        raise HTTPException(
+            status_code=403, detail="Only admin can delete expense types"
+        )
+
+    # Check if expense type is being used in extra_expenses
+    type_doc = await db.expense_types.find_one({"id": type_id}, {"_id": 0})
+    if not type_doc:
+        raise HTTPException(status_code=404, detail="Expense type not found")
+
+    usage_count = await db.extra_expenses.count_documents(
+        {"expense_type": type_doc["name"]}
+    )
+    if usage_count > 0:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Cannot delete expense type used in {usage_count} expenses",
+        )
+
+    result = await db.expense_types.delete_one({"id": type_id})
+    if result.deleted_count == 0:
+        raise HTTPException(status_code=404, detail="Expense type not found")
+
+    return {"message": "Expense type deleted successfully"}
 
 
 # Derived Products Management
