@@ -2020,6 +2020,14 @@ async def get_daily_profit_loss(
         purchase_date_str = purchase.get("purchase_date", "")
         if isinstance(purchase_date_str, str) and len(purchase_date_str) >= 10:
             date_key = purchase_date_str[:10]
+
+            # Apply date filter if specified
+            if date_query:
+                if start_date and date_key < start_date[:10]:
+                    continue
+                if end_date and date_key > end_date[:10]:
+                    continue
+
             daily_data[date_key]["date"] = date_key
             daily_data[date_key]["purchase_cost"] += purchase.get("total_cost", 0)
             daily_data[date_key]["purchase_count"] += 1
@@ -2028,6 +2036,13 @@ async def get_daily_profit_loss(
     for expense in extra_expenses:
         expense_date = expense.get("expense_date", "")
         if expense_date:
+            # Apply date filter if specified
+            if date_query:
+                if start_date and expense_date < start_date[:10]:
+                    continue
+                if end_date and expense_date > end_date[:10]:
+                    continue
+
             daily_data[expense_date]["date"] = expense_date
             daily_data[expense_date]["expenses"] += expense.get("amount", 0)
             daily_data[expense_date]["expense_count"] += 1
