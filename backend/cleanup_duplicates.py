@@ -3,11 +3,12 @@ One-time script to cleanup duplicate expense types in MongoDB
 Run this with: python cleanup_duplicates.py
 """
 import asyncio
+import os
 from motor.motor_asyncio import AsyncIOMotorClient
 
-# MongoDB connection
-MONGO_URL = "mongodb://localhost:27017"
-DATABASE_NAME = "bano_meat_inventory"
+# MongoDB connection - use same env vars as server.py
+MONGO_URL = os.environ.get("MONGO_URL", "mongodb://localhost:27017")
+DATABASE_NAME = os.environ.get("DB_NAME", "bano_meat_inventory")
 
 async def cleanup_duplicates():
     # Connect to MongoDB
