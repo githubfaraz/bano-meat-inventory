@@ -91,6 +91,25 @@ const ExpenseTypes = () => {
     setDialogOpen(false);
   };
 
+  const handleCleanupDuplicates = async () => {
+    if (!window.confirm("This will remove all duplicate expense types, keeping only the oldest entry for each name. Continue?")) {
+      return;
+    }
+
+    try {
+      const token = localStorage.getItem("token");
+      const response = await axios.post(
+        `${API_URL}/api/expense-types/cleanup-duplicates`,
+        {},
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      toast.success(response.data.message);
+      fetchExpenseTypes();
+    } catch (error) {
+      toast.error(error.response?.data?.detail || "Failed to cleanup duplicates");
+    }
+  };
+
   if (loading) {
     return <div className="p-8">Loading expense types...</div>;
   }
@@ -102,13 +121,24 @@ const ExpenseTypes = () => {
           <h1 className="text-3xl font-bold text-gray-900">Expense Types</h1>
           <p className="text-gray-600">({expenseTypes.length} total)</p>
         </div>
-        <Button
-          onClick={() => setDialogOpen(true)}
-          className="bg-emerald-600 hover:bg-emerald-700"
-        >
-          <Plus className="mr-2 h-4 w-4" />
-          Add Expense Type
-        </Button>
+        <div className="flex gap-2">
+          {expenseTypes.length > 13 && (
+            <Button
+              onClick={handleCleanupDuplicates}
+              variant="outline"
+              className="border-orange-500 text-orange-600 hover:bg-orange-50"
+            >
+              Remove Duplicates
+            </Button>
+          )}
+          <Button
+            onClick={() => setDialogOpen(true)}
+            className="bg-emerald-600 hover:bg-emerald-700"
+          >
+            <Plus className="mr-2 h-4 w-4" />
+            Add Expense Type
+          </Button>
+        </div>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
