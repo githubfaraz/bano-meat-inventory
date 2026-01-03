@@ -2435,6 +2435,55 @@ async def delete_expense_type(
     return {"message": "Expense type deleted successfully"}
 
 
+@api_router.post("/expense-types/cleanup-duplicates")
+async def cleanup_duplicate_expense_types(current_user: User = Depends(get_current_user)):
+    """
+    One-time cleanup endpoint to remove duplicate expense types.
+    Keeps the oldest entry for each unique name and removes duplicates.
+    Admin only.
+    """
+    # Check if user is admin
+    user_doc = await db.users.find_one({"id": current_user.id}, {"_id": 0})
+    if not user_doc.get("is_admin", False):
+        raise HTTPException(
+            status_code=403, detail="Only admin can cleanup expense types"
+        )
+
+    # Get all expense types
+    all_types = await db.expense_types.find({}, {"_id": 0}).to_list(length=None)
+
+    # Group by name
+    types_by_name = {}
+    for expense_type in all_types:
+        name = expense_type["name"]
+        if name not in types_by_name:
+            types_by_name[name] = []
+        types_by_name[name].append(expense_type)
+
+    # Find and remove duplicates
+    deleted_count = 0
+    kept_types = []
+
+    for name, types_list in types_by_name.items():
+        if len(types_list) > 1:
+            # Sort by created_at to keep the oldest
+            types_list.sort(key=lambda x: x["created_at"])
+            # Keep the first (oldest), delete the rest
+            kept_types.append(types_list[0])
+            for duplicate in types_list[1:]:
+                await db.expense_types.delete_one({"id": duplicate["id"]})
+                deleted_count += 1
+                logger.info(f"Deleted duplicate expense type: {name} (id: {duplicate['id']})")
+        else:
+            kept_types.append(types_list[0])
+
+    return {
+        "message": f"Cleanup completed. Removed {deleted_count} duplicate expense types.",
+        "deleted_count": deleted_count,
+        "remaining_count": len(kept_types)
+    }
+
+
 # Derived Products Management
 @api_router.get("/derived-products", response_model=List[DerivedProduct])
 async def get_derived_products(
