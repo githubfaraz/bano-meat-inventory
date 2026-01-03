@@ -6,14 +6,19 @@ import os
 from motor.motor_asyncio import AsyncIOMotorClient
 from datetime import datetime
 import pytz
+from dotenv import load_dotenv
 
 async def check_purchases():
+    # Load .env file
+    load_dotenv()
+
     mongo_url = os.environ.get("MONGO_URL")
     db_name = os.environ.get("DB_NAME")
 
     if not mongo_url or not db_name:
         print("ERROR: Environment variables not loaded!")
-        print("Run: source .env")
+        print(f"MONGO_URL: {mongo_url}")
+        print(f"DB_NAME: {db_name}")
         return
 
     client = AsyncIOMotorClient(mongo_url)
