@@ -18,7 +18,7 @@ import {
   PaginationEllipsis,
 } from "@/components/ui/pagination";
 import { toast } from "sonner";
-import { TrendingUp, Calendar, Edit, Trash2, Plus, Download } from "lucide-react";
+import { TrendingUp, Calendar, Edit, Trash2, Plus, Download, Printer } from "lucide-react";
 
 const ITEMS_PER_PAGE = 10;
 
@@ -221,6 +221,267 @@ const Sales = () => {
     }
   };
 
+  const printReceipt = (sale) => {
+    // Find customer details if customer_id exists
+    const customer = sale.customer_id && sale.customer_id !== "walk-in"
+      ? customers.find((c) => c.id === sale.customer_id)
+      : null;
+
+    const customerName = sale.customer_name || "Walk-in Customer";
+    const customerPhone = customer?.phone || null;
+
+    // Calculate discount and tax percentages (reverse calculation)
+    const subtotal = Number(sale.subtotal || 0);
+    const discountAmount = Number(sale.discount || 0);
+    const taxAmount = Number(sale.tax || 0);
+    const total = Number(sale.total || 0);
+
+    // Calculate percentages for display
+    const discountPercent = subtotal > 0 ? ((discountAmount / subtotal) * 100).toFixed(2) : 0;
+    const taxableAmount = subtotal - discountAmount;
+    const taxPercent = taxableAmount > 0 ? ((taxAmount / taxableAmount) * 100).toFixed(2) : 0;
+
+    const receiptContent = `
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <meta charset="UTF-8">
+          <title>Receipt - BANO FRESH</title>
+          <style>
+            @page {
+              size: 3in auto;
+              margin: 0;
+            }
+
+            body {
+              font-family: 'Courier New', monospace;
+              font-size: 12px;
+              width: 3in;
+              max-width: 3in;
+              margin: 0 auto;
+              padding: 6px 8px;
+              background: white;
+              color: #000;
+              -webkit-print-color-adjust: exact;
+              print-color-adjust: exact;
+            }
+
+            .header {
+              text-align: center;
+              margin-bottom: 8px;
+              padding-bottom: 6px;
+              border-bottom: 2px solid #000;
+            }
+
+            .logo {
+              width: 80px;
+              height: 80px;
+              margin: 0 auto 6px;
+              display: block;
+            }
+
+            .business-name {
+              font-size: 18px;
+              font-weight: bold;
+              text-transform: uppercase;
+              margin: 4px 0;
+            }
+
+            .tagline {
+              font-size: 11px;
+              color: #333;
+              margin-bottom: 6px;
+            }
+
+            .info-section {
+              font-size: 13px;
+              margin: 8px 0;
+              font-weight: bold;
+            }
+
+            .info-section .phone {
+              font-size: 11px;
+              margin-left: 12px;
+              font-weight: normal;
+            }
+
+            .items-table {
+              width: 100%;
+              border-collapse: collapse;
+              margin: 10px 0;
+              border-top: 1px dashed #000;
+              border-bottom: 1px dashed #000;
+            }
+
+            .items-table th {
+              text-align: left;
+              padding: 4px 2px;
+              font-size: 12px;
+              font-weight: bold;
+              border-bottom: 1px solid #000;
+            }
+
+            .items-table td {
+              padding: 3px 2px;
+              font-size: 12px;
+              font-weight: bold;
+            }
+
+            .item-name {
+              width: 35%;
+            }
+
+            .item-qty {
+              width: 20%;
+              text-align: center;
+            }
+
+            .item-rate {
+              width: 22%;
+              text-align: right;
+            }
+
+            .item-amt {
+              width: 23%;
+              text-align: right;
+            }
+
+            .totals {
+              margin-top: 8px;
+              font-size: 12px;
+            }
+
+            .total-row {
+              display: flex;
+              justify-content: space-between;
+              padding: 2px 0;
+              font-weight: bold;
+            }
+
+            .final-total {
+              font-size: 14px;
+              margin-top: 4px;
+              padding-top: 4px;
+              border-top: 2px solid #000;
+              font-weight: bold;
+            }
+
+            .footer {
+              text-align: center;
+              margin-top: 10px;
+              padding-top: 8px;
+              border-top: 1px dashed #000;
+              font-size: 11px;
+            }
+
+            @media print {
+              body {
+                margin: 0;
+                padding: 6px 8px;
+                width: 3in;
+                color: #000;
+              }
+
+              @page {
+                size: 3in auto;
+                margin: 0;
+              }
+
+              * {
+                color: #000 !important;
+                -webkit-print-color-adjust: exact;
+                print-color-adjust: exact;
+              }
+
+              .footer {
+                page-break-inside: avoid;
+                page-break-before: avoid;
+              }
+            }
+          </style>
+        </head>
+        <body>
+          <div class="header">
+            <img src="https://i.ibb.co/F4FJsLz/bano-fresh-logo.png" alt="BANO FRESH" class="logo" />
+            <div class="business-name">BANO FRESH</div>
+            <div class="tagline">Premium Meat Shop</div>
+          </div>
+
+          <div class="info-section">
+            <div>Date: ${formatDateTime(sale.sale_date || sale.created_at)}</div>
+            <div>Customer: ${customerName}</div>
+            ${customerPhone ? `<div class="phone">Phone: ${customerPhone}</div>` : ''}
+            <div>Payment: ${(sale.payment_method || 'cash').toUpperCase()}</div>
+          </div>
+
+          <table class="items-table">
+            <thead>
+              <tr>
+                <th class="item-name">Item</th>
+                <th class="item-qty">Qty</th>
+                <th class="item-rate">Rate</th>
+                <th class="item-amt">Amt</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${sale.items.map(item => `
+                <tr>
+                  <td class="item-name">${item.product_name || 'Unknown'}</td>
+                  <td class="item-qty">${Number(item.quantity || 0).toFixed(2)}${item.unit || 'kg'}</td>
+                  <td class="item-rate">₹${Number(item.price_per_unit || 0).toFixed(2)}</td>
+                  <td class="item-amt">₹${Number(item.total || 0).toFixed(2)}</td>
+                </tr>
+              `).join('')}
+            </tbody>
+          </table>
+
+          <div class="totals">
+            <div class="total-row">
+              <span>Subtotal:</span>
+              <span>₹${subtotal.toFixed(2)}</span>
+            </div>
+            ${discountAmount > 0 ? `
+              <div class="total-row">
+                <span>Discount (${discountPercent}%):</span>
+                <span>-₹${discountAmount.toFixed(2)}</span>
+              </div>
+            ` : ''}
+            ${taxAmount > 0 ? `
+              <div class="total-row">
+                <span>Tax (${taxPercent}%):</span>
+                <span>₹${taxAmount.toFixed(2)}</span>
+              </div>
+            ` : ''}
+            <div class="total-row final-total">
+              <span>TOTAL:</span>
+              <span>₹${total.toFixed(2)}</span>
+            </div>
+          </div>
+
+          <div class="footer">
+            <p>Thank you!</p>
+            <p>Visit us again</p>
+          </div>
+
+          <script>
+            window.onload = function() {
+              setTimeout(function() {
+                window.print();
+                setTimeout(function() {
+                  window.close();
+                }, 100);
+              }, 250);
+            }
+          </script>
+        </body>
+      </html>
+    `;
+
+    const printWindow = window.open('', '_blank', 'width=288');
+    printWindow.document.write(receiptContent);
+    printWindow.document.close();
+  };
+
   if (loading) {
     return <div className="p-8">Loading sales...</div>;
   }
@@ -394,6 +655,9 @@ const Sales = () => {
                     <p className="text-xs text-gray-500 mt-1">{(sale.payment_method || 'cash').toUpperCase()}</p>
                   </div>
                   <div className="flex gap-2">
+                    <Button variant="ghost" size="icon" onClick={() => printReceipt(sale)} data-testid={`print-sale-${sale.id}`} title="Print Receipt">
+                      <Printer className="h-4 w-4 text-emerald-600" />
+                    </Button>
                     <Button variant="ghost" size="icon" onClick={() => handleEditSale(sale)} data-testid={`edit-sale-${sale.id}`}>
                       <Edit className="h-4 w-4" />
                     </Button>
