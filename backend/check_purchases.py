@@ -60,12 +60,31 @@ async def check_purchases():
     count2 = await db.inventory_purchases.count_documents(query2)
     print(f"Datetime range match: {count2} purchases")
 
-    # Show actual purchases
-    if count2 > 0:
-        purchases_jan2 = await db.inventory_purchases.find(query2, {"_id": 0}).to_list(10)
-        print(f"\nFound {len(purchases_jan2)} purchases on 2026-01-02:")
+    # Show actual purchases using string query
+    query_str = {"purchase_date": {"$regex": "^2026-01-02"}}
+    purchases_jan2 = await db.inventory_purchases.find(query_str, {"_id": 0}).to_list(10)
+
+    if purchases_jan2:
+        print(f"\nFound {len(purchases_jan2)} purchases with purchase_date = 2026-01-02:")
         for p in purchases_jan2:
-            print(f"  - {p.get('main_category_name')}: ₹{p.get('total_cost')} on {p.get('purchase_date')}")
+            print(f"  Category: {p.get('main_category_name')}")
+            print(f"  Purchase Date: {p.get('purchase_date')}")
+            print(f"  Created At: {p.get('created_at')}")
+            print(f"  Total Cost: ₹{p.get('total_cost')}")
+            print()
+
+    # Also check created_at for today (2026-01-02)
+    query_created = {"created_at": {"$regex": "^2026-01-02"}}
+    created_jan2 = await db.inventory_purchases.find(query_created, {"_id": 0}).to_list(10)
+
+    if created_jan2:
+        print(f"\nFound {len(created_jan2)} purchases created on 2026-01-02:")
+        for p in created_jan2:
+            print(f"  Category: {p.get('main_category_name')}")
+            print(f"  Purchase Date: {p.get('purchase_date')}")
+            print(f"  Created At: {p.get('created_at')}")
+            print(f"  Total Cost: ₹{p.get('total_cost')}")
+            print()
 
     client.close()
 

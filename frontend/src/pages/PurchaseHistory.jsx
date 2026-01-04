@@ -125,8 +125,8 @@ const PurchaseHistory = () => {
     const formatDate = (dateString) => {
       if (!dateString) return new Date().toISOString().split('T')[0];
       try {
-        const date = new Date(dateString);
-        return date.toISOString().split('T')[0];
+        // Extract just the date part (YYYY-MM-DD) from ISO string without timezone conversion
+        return dateString.split('T')[0];
       } catch {
         return new Date().toISOString().split('T')[0];
       }

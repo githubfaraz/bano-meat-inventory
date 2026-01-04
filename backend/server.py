@@ -1974,20 +1974,17 @@ async def get_daily_profit_loss(
     pos_sales = await db.pos_sales.find({}, {"_id": 0}).to_list(10000)
 
     # Fetch inventory purchases
-    # Note: purchase_date is stored as datetime object, not string
+    # Note: purchase_date is stored as ISO string (e.g., "2026-01-02T14:30:00+05:30")
     purchase_query = {}
     if date_query:
-        # Convert string dates to datetime objects for comparison
-        datetime_filter = {}
+        date_filter = {}
         if start_date:
-            # Start of day in IST
-            datetime_filter["$gte"] = IST.localize(datetime.strptime(start_date[:10], "%Y-%m-%d"))
+            # Start of day: "2026-01-02T00:00:00"
+            date_filter["$gte"] = start_date[:10] + "T00:00:00"
         if end_date:
-            # End of day in IST (23:59:59)
-            end_dt = IST.localize(datetime.strptime(end_date[:10], "%Y-%m-%d"))
-            end_dt = end_dt.replace(hour=23, minute=59, second=59)
-            datetime_filter["$lte"] = end_dt
-        purchase_query["purchase_date"] = datetime_filter
+            # End of day: "2026-01-02T23:59:59"
+            date_filter["$lte"] = end_date[:10] + "T23:59:59"
+        purchase_query["purchase_date"] = date_filter
     inventory_purchases = await db.inventory_purchases.find(purchase_query, {"_id": 0}).to_list(10000)
 
     # Fetch extra expenses
