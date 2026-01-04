@@ -206,7 +206,7 @@ class DashboardStats(BaseModel):
     low_stock_items: int
     total_customers: int
     total_products: int
-    recent_sales: List[Sale]
+    recent_sales: List[POSSaleNew]
 
 
 class PurchaseCreate(BaseModel):
@@ -1079,6 +1079,9 @@ async def get_dashboard_stats(current_user: User = Depends(get_current_user)):
         recent = (
             await db.pos_sales.find({}, {"_id": 0}).sort("sale_date", -1).limit(5).to_list(5)
         )
+
+        # Convert to POSSaleNew models
+        recent_sales = []
         for s in recent:
             try:
                 # Ensure sale_date is datetime object for response
@@ -1095,8 +1098,14 @@ async def get_dashboard_stats(current_user: User = Depends(get_current_user)):
                         created_at = IST.localize(created_at)
                     s["created_at"] = created_at
 
-                # Convert items to proper format
-                s["items"] = [SaleItem(**item) for item in s.get("items", [])]
+                # Convert items to POSSaleItemNew format
+                items = []
+                for item in s.get("items", []):
+                    items.append(POSSaleItemNew(**item))
+                s["items"] = items
+
+                # Create POSSaleNew model
+                recent_sales.append(POSSaleNew(**s))
             except Exception as e:
                 logging.warning(f"Error processing recent sale: {e}")
                 continue
@@ -1111,7 +1120,7 @@ async def get_dashboard_stats(current_user: User = Depends(get_current_user)):
             low_stock_items=low_stock_count,
             total_customers=total_customers,
             total_products=total_products,
-            recent_sales=[Sale(**s) for s in recent],
+            recent_sales=recent_sales,
         )
     except Exception as e:
         logging.error(f"Error in dashboard stats: {str(e)}")
