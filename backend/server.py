@@ -206,7 +206,7 @@ class DashboardStats(BaseModel):
     low_stock_items: int
     total_customers: int
     total_products: int
-    recent_sales: List[POSSaleNew]
+    recent_sales: List["POSSaleNew"]  # Forward reference - POSSaleNew defined later
 
 
 class PurchaseCreate(BaseModel):
