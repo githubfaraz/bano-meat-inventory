@@ -1638,9 +1638,13 @@ async def get_purchase_report(
     if start_date or end_date:
         date_filter = {}
         if start_date:
-            date_filter["$gte"] = start_date[:10]
+            # Use full timestamp for string comparison (e.g., "2026-01-02T00:00:00")
+            # Frontend already sends in this format
+            date_filter["$gte"] = start_date
         if end_date:
-            date_filter["$lte"] = end_date[:10]
+            # Use full timestamp for string comparison (e.g., "2026-01-02T23:59:59")
+            # Frontend already sends in this format
+            date_filter["$lte"] = end_date
         query["purchase_date"] = date_filter
 
     # Fetch purchases from inventory_purchases collection with filters
@@ -2662,9 +2666,13 @@ async def get_inventory_purchases(
     if start_date or end_date:
         date_filter = {}
         if start_date:
-            date_filter["$gte"] = start_date[:10]
+            # Use full timestamp for string comparison (e.g., "2026-01-02T00:00:00")
+            # Frontend already sends in this format
+            date_filter["$gte"] = start_date
         if end_date:
-            date_filter["$lte"] = end_date[:10]
+            # Use full timestamp for string comparison (e.g., "2026-01-02T23:59:59")
+            # Frontend already sends in this format
+            date_filter["$lte"] = end_date
         query["purchase_date"] = date_filter
 
     purchases = (
