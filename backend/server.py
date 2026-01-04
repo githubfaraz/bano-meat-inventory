@@ -994,8 +994,8 @@ async def get_dashboard_stats(current_user: User = Depends(get_current_user)):
             day=1, hour=0, minute=0, second=0, microsecond=0
         )
 
-        # Fetch all sales
-        all_sales = await db.sales.find({}, {"_id": 0}).to_list(10000)
+        # Fetch all POS sales (not legacy 'sales' collection)
+        all_sales = await db.pos_sales.find({}, {"_id": 0}).to_list(10000)
 
         # Calculate today's and month's sales
         total_sales_today = 0
@@ -1003,21 +1003,33 @@ async def get_dashboard_stats(current_user: User = Depends(get_current_user)):
 
         for s in all_sales:
             try:
-                sale_date = datetime.fromisoformat(s["created_at"])
+                # POS sales use 'sale_date' field
+                sale_date_value = s.get("sale_date")
+                if not sale_date_value:
+                    continue
+
+                # Handle both string and datetime types
+                if isinstance(sale_date_value, str):
+                    sale_date = datetime.fromisoformat(sale_date_value)
+                elif isinstance(sale_date_value, datetime):
+                    sale_date = sale_date_value
+                else:
+                    continue
+
                 # Ensure timezone-aware comparison
                 if sale_date.tzinfo is None:
                     sale_date = IST.localize(sale_date)
 
                 if sale_date >= today_start:
-                    total_sales_today += s["total"]
+                    total_sales_today += s.get("total", 0)
                 if sale_date >= month_start:
-                    total_sales_month += s["total"]
+                    total_sales_month += s.get("total", 0)
             except Exception as e:
                 logging.warning(f"Error processing sale date: {e}")
                 continue
 
-        # Fetch all purchases
-        all_purchases = await db.purchases.find({}, {"_id": 0}).to_list(10000)
+        # Fetch all inventory purchases (not legacy 'purchases' collection)
+        all_purchases = await db.inventory_purchases.find({}, {"_id": 0}).to_list(10000)
 
         # Calculate today's and month's purchases
         total_purchases_today = 0
@@ -1063,18 +1075,28 @@ async def get_dashboard_stats(current_user: User = Depends(get_current_user)):
         total_customers = await db.customers.count_documents({})
         total_products = await db.products.count_documents({})
 
-        # Recent sales
+        # Recent sales (from POS sales collection)
         recent = (
-            await db.sales.find({}, {"_id": 0}).sort("created_at", -1).limit(5).to_list(5)
+            await db.pos_sales.find({}, {"_id": 0}).sort("sale_date", -1).limit(5).to_list(5)
         )
         for s in recent:
             try:
-                if isinstance(s.get("created_at"), str):
-                    sale_date = datetime.fromisoformat(s["created_at"])
+                # Ensure sale_date is datetime object for response
+                if isinstance(s.get("sale_date"), str):
+                    sale_date = datetime.fromisoformat(s["sale_date"])
                     if sale_date.tzinfo is None:
                         sale_date = IST.localize(sale_date)
-                    s["created_at"] = sale_date
-                s["items"] = [SaleItem(**item) for item in s["items"]]
+                    s["sale_date"] = sale_date
+
+                # Ensure created_at is datetime object for response
+                if isinstance(s.get("created_at"), str):
+                    created_at = datetime.fromisoformat(s["created_at"])
+                    if created_at.tzinfo is None:
+                        created_at = IST.localize(created_at)
+                    s["created_at"] = created_at
+
+                # Convert items to proper format
+                s["items"] = [SaleItem(**item) for item in s.get("items", [])]
             except Exception as e:
                 logging.warning(f"Error processing recent sale: {e}")
                 continue
